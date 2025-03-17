@@ -1,2 +1,2 @@
 # Smartbites
-hello worlds my worlds
+Authors: Reinmark
