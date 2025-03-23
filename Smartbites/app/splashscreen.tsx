@@ -1,10 +1,12 @@
+import React from "react";
 import { View, Image, StyleSheet } from "react-native";
-import icon from "../assets/images/logo/smartbites-high-resolution-logo.png";
+
+const icon = require("../assets/images/logo/smartbites-high-resolution-logo.png");
 
 export default function SplashScreen() {
   return (
     <View style={styles.container}>
-      <Image source={icon} style={styles.logo} />
+      <Image source={icon} style={styles.logo} resizeMode="contain" />
     </View>
   );
 }
