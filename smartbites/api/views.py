@@ -58,3 +58,13 @@ from rest_framework.permissions import IsAuthenticated
 @permission_classes([IsAuthenticated])
 def my_secure_view(request):
     return Response({"message": "Welcome, authorized user!"})
+
+# User Profiles
+from .serializers import UserProfileSerializer
+
+@api_view(['GET'])
+def get_user_profiles(request):
+    """API to get all user profiles"""
+    profiles = UserProfile.objects.all()  # Get all user profiles
+    serializer = UserProfileSerializer(profiles, many=True)  # Serialize them
+    return Response(serializer.data)  # Send JSON response

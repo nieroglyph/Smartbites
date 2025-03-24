@@ -12,7 +12,6 @@ class UserProfile(models.Model):
         ('omnivore', 'Omnivore'),
     ], default='omnivore')
     allergies = models.TextField(blank=True, null=True)
-    caloric_needs = models.IntegerField(blank=True, null=True)
 
     def __str__(self):
         return self.user.username
