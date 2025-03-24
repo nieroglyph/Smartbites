@@ -68,3 +68,80 @@ def get_user_profiles(request):
     profiles = UserProfile.objects.all()  # Get all user profiles
     serializer = UserProfileSerializer(profiles, many=True)  # Serialize them
     return Response(serializer.data)  # Send JSON response
+
+# Recipes api view
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.permissions import IsAuthenticated
+from .models import Recipe
+from .serializers import RecipeSerializer
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def save_recipe(request):
+    """Save a new recipe for the logged-in user."""
+    data = request.data.copy()  # Make a copy of the request data
+    data['user'] = request.user.id  # Assign the logged-in user to the recipe
+
+    serializer = RecipeSerializer(data=data)
+    if serializer.is_valid():
+        serializer.save(user=request.user)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def get_user_recipes(request):
+    """Retrieve all recipes saved by the logged-in user."""
+    recipes = Recipe.objects.filter(user=request.user)
+    serializer = RecipeSerializer(recipes, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['DELETE'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def delete_recipe(request, recipe_id):
+    """Delete a recipe saved by the logged-in user."""
+    try:
+        recipe = Recipe.objects.get(id=recipe_id, user=request.user)
+        recipe.delete()
+        return Response({'message': 'Recipe deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+    except Recipe.DoesNotExist:
+        return Response({'error': 'Recipe not found'}, status=status.HTTP_404_NOT_FOUND)
+
+# Nutrition Endpoint
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from .utils import get_nutrition_data
+
+@api_view(['GET'])
+def nutrition_info(request):
+    """API to fetch nutrition info by food name"""
+    food_name = request.GET.get("food", "")
+    if not food_name:
+        return Response({"error": "Food name is required"}, status=400)
+
+    data = get_nutrition_data(food_name)
+    if data:
+        return Response(data)
+    
+    return Response({"error": "No data found"}, status=404)
+
+# Recipe Endpoint
+from .utils import get_recipes
+
+@api_view(['GET'])
+def recipe_search(request):
+    """API to fetch recipes by ingredient"""
+    ingredient = request.GET.get("ingredient", "")
+    if not ingredient:
+        return Response({"error": "Ingredient is required"}, status=400)
+
+    recipes = get_recipes(ingredient)
+    return Response(recipes)
