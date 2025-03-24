@@ -23,10 +23,10 @@ def register_user(request):
 
     return Response({'message': 'User registered successfully'}, status=status.HTTP_201_CREATED)
 
+# User Login
 from django.contrib.auth import authenticate, login, logout
 from rest_framework.authtoken.models import Token
 
-# User Login
 @api_view(['POST'])
 def login_user(request):
     """API to log in a user and return an authentication token"""
