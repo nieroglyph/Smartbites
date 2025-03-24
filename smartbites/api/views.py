@@ -137,14 +137,17 @@ def nutrition_info(request):
     return Response({"error": "No data found"}, status=404)
 
 # Recipe Endpoint
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 from .utils import get_recipes
 
 @api_view(['GET'])
 def recipe_search(request):
-    """API to fetch recipes by ingredient"""
-    ingredient = request.GET.get("ingredient", "")
-    if not ingredient:
-        return Response({"error": "Ingredient is required"}, status=400)
+    """API to fetch recipes by multiple ingredients"""
+    ingredients = request.GET.getlist("ingredient")  # Accept multiple ingredients
 
-    recipes = get_recipes(ingredient)
+    if not ingredients:
+        return Response({"error": "At least one ingredient is required"}, status=400)
+
+    recipes = get_recipes(ingredients)
     return Response(recipes)
