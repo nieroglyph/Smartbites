@@ -61,12 +61,15 @@ def my_secure_view(request):
 
 # User Profiles
 from .serializers import UserProfileSerializer
+from .models import UserProfile
+from rest_framework.permissions import IsAuthenticated
 
 @api_view(['GET'])
-def get_user_profiles(request):
-    """API to get all user profiles"""
-    profiles = UserProfile.objects.all()  # Get all user profiles
-    serializer = UserProfileSerializer(profiles, many=True)  # Serialize them
+@permission_classes([IsAuthenticated])  # Ensure the user is logged in
+def get_user_profile(request):
+    """API to get the logged-in user's profile"""
+    user_profile = UserProfile.objects.get(user=request.user)  # Get profile linked to user
+    serializer = UserProfileSerializer(user_profile)  # Serialize it
     return Response(serializer.data)  # Send JSON response
 
 # Recipes api view
