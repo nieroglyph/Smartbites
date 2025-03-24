@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 import * as Font from "expo-font";
 import { MaterialIcons, FontAwesome } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 const loadFonts = async () => {
   await Font.loadAsync({
@@ -10,8 +11,9 @@ const loadFonts = async () => {
   });
 };
 
-const LoginScreen = ({ navigation }) => {
+const LoginScreen: React.FC = () => {
   const [fontsLoaded, setFontsLoaded] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     async function fetchFonts() {
@@ -22,7 +24,7 @@ const LoginScreen = ({ navigation }) => {
   }, []);
 
   if (!fontsLoaded) {
-    return <Text>Loading Fonts...</Text>;
+    return null;
   }
 
   return (
@@ -45,7 +47,7 @@ const LoginScreen = ({ navigation }) => {
       </View>
 
       {/* Forgot Password */}
-      <TouchableOpacity onPress={() => navigation.navigate("ForgotPassword1")}>
+      <TouchableOpacity onPress={() => router.push("/forgot_password_1")}>
         <Text style={styles.forgotPassword}>Forgot Password?</Text>
       </TouchableOpacity>
 
@@ -57,7 +59,7 @@ const LoginScreen = ({ navigation }) => {
       {/* Signup Link */}
       <View style={styles.signupContainer}>
         <Text style={styles.signupText}>Don’t have an account? </Text>
-        <TouchableOpacity onPress={() => navigation.navigate("Signup")}>
+        <TouchableOpacity onPress={() => router.push("/sign_up")}>
           <Text style={styles.signupLink}>Sign Up</Text>
         </TouchableOpacity>
       </View>
@@ -65,29 +67,30 @@ const LoginScreen = ({ navigation }) => {
   );
 };
 
+// Styles remain unchanged...
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0A1C1E",
+    backgroundColor: "#00272B",
     paddingHorizontal: 20,
     justifyContent: "center",
   },
   welcomeText: {
     fontSize: 24,
-    color: "white",
+    color: "#FBFCF8",
     textAlign: "center",
     fontFamily: "IstokWeb-Bold",
   },
   logo: {
     fontSize: 28,
     fontFamily: "IrishGrover-Regular",
-    color: "#FFA500",
+    color: "#FE7F2D",
     textAlign: "center",
     marginBottom: 30,
   },
   signInText: {
     fontSize: 22,
-    color: "white",
+    color: "#FBFCF8",
     marginBottom: 10,
     fontFamily: "IstokWeb-Bold",
   },
@@ -109,13 +112,13 @@ const styles = StyleSheet.create({
     fontFamily: "IstokWeb-Bold",
   },
   forgotPassword: {
-    color: "#FFD700",
+    color: "#E0FF4F",
     textAlign: "right",
     marginBottom: 20,
     fontFamily: "IstokWeb-Bold",
   },
   loginButton: {
-    backgroundColor: "#FFA500",
+    backgroundColor: "#FE7F2D",
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: "center",
@@ -132,11 +135,11 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   signupText: {
-    color: "white",
+    color: "#FBFCF8",
     fontFamily: "IstokWeb-Bold",
   },
   signupLink: {
-    color: "#FFA500",
+    color: "#E0FF4F",
     fontWeight: "bold",
     fontFamily: "IstokWeb-Bold",
   },
