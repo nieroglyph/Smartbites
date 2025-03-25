@@ -61,16 +61,29 @@ const SignupScreen = () => {
     return valid;
   };
 
-  const handleSignUp = () => {
+  const handleSignUp = async () => {
     if (validateFields()) {
-      // All fields are valid - redirect to home
-      router.push("/home");
-    } else {
-      Alert.alert(
-        "Missing Information",
-        "Please fill in all required fields correctly",
-        [{ text: "OK" }]
-      );
+      try {
+        const response = await fetch("http://<IPADRESS:8000>/api/register/", {  // Replace with your backend IP
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            full_name: fullName,  // Include full name
+            email,
+            password,
+          }),
+        });
+  
+        const data = await response.json();
+        if (response.ok) {
+          Alert.alert("Success", "Account created successfully!");
+          router.push("/login");
+        } else {
+          Alert.alert("Error", data.error || "Registration failed");
+        }
+      } catch (error) {
+        Alert.alert("Error", "Something went wrong. Try again.");
+      }
     }
   };
 

@@ -8,20 +8,25 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from .models import UserProfile
 
+from rest_framework.response import Response
+from rest_framework.decorators import api_view
+from rest_framework import status
+from .models import CustomUser
+
 @api_view(['POST'])
 def register_user(request):
-    """API to register a new user"""
-    username = request.data.get('username')
-    email = request.data.get('email')
-    password = request.data.get('password')
+    email = request.data.get("email")
+    full_name = request.data.get("full_name")  # Get full name from request
+    password = request.data.get("password")
 
-    if User.objects.filter(username=username).exists():
-        return Response({'error': 'Username already taken'}, status=status.HTTP_400_BAD_REQUEST)
+    if not email or not password:
+        return Response({"error": "Email and password are required."}, status=status.HTTP_400_BAD_REQUEST)
 
-    user = User.objects.create_user(username=username, email=email, password=password)
-    UserProfile.objects.create(user=user)  # Create linked UserProfile
+    if CustomUser.objects.filter(email=email).exists():
+        return Response({"error": "User with this email already exists."}, status=status.HTTP_400_BAD_REQUEST)
 
-    return Response({'message': 'User registered successfully'}, status=status.HTTP_201_CREATED)
+    user = CustomUser.objects.create_user(email=email, password=password, full_name=full_name)  # Pass full_name
+    return Response({"message": "User registered successfully"}, status=status.HTTP_201_CREATED)
 
 # User Login
 from django.contrib.auth import authenticate, login, logout

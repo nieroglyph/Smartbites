@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'api',
     'rest_framework',
     'rest_framework.authtoken',
+    'corsheaders',
 ]
 
 REST_FRAMEWORK = {
@@ -56,6 +57,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = 'smartbites.urls'
@@ -136,3 +138,13 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'api.CustomUser'  # Replace 'yourapp' with your app name
+
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:3000",  # Allow React frontend
+#     "http://192.168.100.10:8000/", # TEST
+# ]
+
+# # FOR TESTING!!!
+# CORS_ALLOW_ALL_ORIGINS = True  # Allow all origins (for testing)
+
+ALLOWED_HOSTS = ['192.168.100.10']  # Or ['your-local-ip']
