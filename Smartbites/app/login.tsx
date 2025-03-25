@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import * as Font from "expo-font";
 import { MaterialIcons, FontAwesome } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage"; // Store token locally
 
 const loadFonts = async () => {
   await Font.loadAsync({
@@ -15,6 +16,10 @@ const LoginScreen: React.FC = () => {
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const router = useRouter();
 
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
   useEffect(() => {
     async function fetchFonts() {
       await loadFonts();
@@ -22,6 +27,38 @@ const LoginScreen: React.FC = () => {
     }
     fetchFonts();
   }, []);
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert("Error", "Please enter email and password.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch("http://<IPADDRESS>/api/login/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        await AsyncStorage.setItem("authToken", data.token); // Save token
+        Alert.alert("Success", "Logged in successfully!");
+        router.push("/home"); // Redirect to home screen
+      } else {
+        Alert.alert("Login Failed", data.detail || "Invalid credentials");
+      }
+    } catch (error) {
+      Alert.alert("Error", "Something went wrong. Try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!fontsLoaded) {
     return null;
@@ -37,13 +74,26 @@ const LoginScreen: React.FC = () => {
       {/* Email Input */}
       <View style={styles.inputContainer}>
         <MaterialIcons name="email" size={20} color="#FFA500" style={styles.icon} />
-        <TextInput style={styles.input} placeholder="Email Address" placeholderTextColor="#ccc" />
+        <TextInput
+          style={styles.input}
+          placeholder="Email Address"
+          placeholderTextColor="#ccc"
+          value={email}
+          onChangeText={setEmail}
+        />
       </View>
 
       {/* Password Input */}
       <View style={styles.inputContainer}>
         <FontAwesome name="lock" size={20} color="#FFA500" style={styles.icon} />
-        <TextInput style={styles.input} placeholder="Password" placeholderTextColor="#ccc" secureTextEntry />
+        <TextInput
+          style={styles.input}
+          placeholder="Password"
+          placeholderTextColor="#ccc"
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
       </View>
 
       {/* Forgot Password */}
@@ -52,8 +102,8 @@ const LoginScreen: React.FC = () => {
       </TouchableOpacity>
 
       {/* Login Button */}
-      <TouchableOpacity style={styles.loginButton}>
-        <Text style={styles.loginText}>Log in</Text>
+      <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={loading}>
+        <Text style={styles.loginText}>{loading ? "Logging in..." : "Log in"}</Text>
       </TouchableOpacity>
 
       {/* Signup Link */}
