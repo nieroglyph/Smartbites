@@ -17,7 +17,7 @@ export default function RootLayout() {
         {/* Main App Screens */}
         <Stack.Screen name="home" options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name="budget" options={{ headerShown: false, gestureEnabled: false }} />
-        <Stack.Screen name="capture" options={{ headerShown: false, gestureEnabled: false }} />
+        <Stack.Screen name="chat" options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name="profile" options={{ headerShown: false, gestureEnabled: false }} />
       </Stack>
     </GestureHandlerRootView>

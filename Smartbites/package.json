@@ -44,7 +44,9 @@
     "react-native-web": "~0.19.13",
     "react-native-webview": "13.12.5",
     "react-navigation": "^4.4.4",
-    "react-navigation-bottom-tabs": "^1.0.2"
+    "react-navigation-bottom-tabs": "^1.0.2",
+    "expo-camera": "~16.0.18",
+    "expo-image-picker": "~16.0.6"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

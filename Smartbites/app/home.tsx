@@ -45,22 +45,24 @@ const HomeScreen = () => {
       {/* Bottom Navigation */}
       <View style={styles.navContainer}>
         <View style={styles.navigation}>
-          {/* Home */}
+          {/* Home with glow effect */}
           <TouchableOpacity 
             style={styles.navItem} 
             onPress={() => router.push('/home')}
           >
-            <FontAwesomeIcon name="home" size={24} color="#FE7F2D" />
+            <View style={styles.glowContainer}>
+              <FontAwesomeIcon name="home" size={24} color="#FE7F2D" style={styles.glowIcon} />
+            </View>
             <Text style={[styles.navText, styles.customFont]}>Home</Text>
           </TouchableOpacity>
 
-          {/* Capture */}
+          {/* Chat */}
           <TouchableOpacity 
             style={styles.navItem} 
-            onPress={() => router.push('/capture')}
+            onPress={() => router.push('/chat')}
           >
-            <Icon name="camera-alt" size={24} color="#FE7F2D" />
-            <Text style={[styles.navText, styles.customFont]}>Capture</Text>
+            <FontAwesome6Icon name="brain" size={24} color="#FE7F2D" />
+            <Text style={[styles.navText, styles.customFont]}>Chat</Text>
           </TouchableOpacity>
 
           {/* Budget */}
@@ -86,7 +88,6 @@ const HomeScreen = () => {
   );
 };
 
-// Styles remain unchanged
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -174,6 +175,19 @@ const styles = StyleSheet.create({
   },
   customFont: {
     fontFamily: 'IstokWeb-Regular',
+  },
+  glowContainer: {
+    position: 'relative',
+  },
+  glowIcon: {
+    textShadowColor: '#E0FF4F',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
+    shadowColor: '#E0FF4F',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
+    elevation: 10,
   },
 });
 
