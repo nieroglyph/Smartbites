@@ -7,11 +7,11 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from .models import UserProfile
-
-from rest_framework.response import Response
-from rest_framework.decorators import api_view
-from rest_framework import status
 from .models import CustomUser
+from django.contrib.auth import logout
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.permissions import IsAuthenticated
 
 @api_view(['POST'])
 def register_user(request):
@@ -50,10 +50,17 @@ def login_user(request):
 
 # User Logout
 @api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
 def logout_user(request):
     """API to log out a user"""
-    request.user.auth_token.delete()
+    # Delete token if it exists
+    if request.user.auth_token:
+        request.user.auth_token.delete()
+    
+    # Logout user
     logout(request)
+
     return Response({'message': 'Logged out successfully'}, status=status.HTTP_200_OK)
 
 # User Authentication

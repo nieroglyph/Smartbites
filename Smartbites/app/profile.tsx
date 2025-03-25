@@ -4,6 +4,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
 import LogoutSplashScreen from './logout_splashscreen';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type IoniconsName = 
   | 'person-outline' 
@@ -46,9 +47,28 @@ const ProfileScreen = () => {
     console.log(`Navigating to ${label}`);
   };
 
-  const handleLogout = () => {
-    console.log("Logging out...");
-    router.push('/logout_splashscreen');
+  const handleLogout = async () => {
+    try {
+      const token = await AsyncStorage.getItem("authToken");
+      if (!token) return;
+  
+      // Send logout request to Django
+      await fetch("http://<IPADDRESS:8000>/api/logout/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Token ${token}`,
+        },
+      });
+  
+      // Remove token from AsyncStorage
+      await AsyncStorage.removeItem("authToken");
+  
+      // Navigate to the logout splash screen
+      router.push("/logout_splashscreen");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
   };
 
   return (
