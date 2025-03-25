@@ -141,10 +141,6 @@ AUTH_USER_MODEL = 'api.CustomUser'  # Replace 'yourapp' with your app name
 
 # CORS_ALLOWED_ORIGINS = [
 #     "http://localhost:3000",  # Allow React frontend
-#     "http://192.168.100.10:8000/", # TEST
 # ]
 
-# # FOR TESTING!!!
-# CORS_ALLOW_ALL_ORIGINS = True  # Allow all origins (for testing)
-
-ALLOWED_HOSTS = ['192.168.100.10']  # Or ['your-local-ip']
+ALLOWED_HOSTS = ['']  # Or ['your-local-ip']
