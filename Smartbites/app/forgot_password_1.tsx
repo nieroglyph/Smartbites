@@ -1,10 +1,10 @@
 import React from "react";
-import { useState, useEffect } from "react";
 import { useFonts } from "expo-font";
 import { 
   View, Text, TextInput, TouchableOpacity, Image, StyleSheet, ActivityIndicator 
 } from "react-native";
 import { useRouter } from "expo-router";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 const ForgotPasswordScreen: React.FC = () => {
   const router = useRouter();
@@ -14,33 +14,40 @@ const ForgotPasswordScreen: React.FC = () => {
   });
 
   if (!fontsLoaded) {
-    return (
-      <ActivityIndicator size="large" color="#FF7F32" style={styles.loader} />
-    );
+    return <ActivityIndicator size="large" color="#FF7F32" style={styles.loader} />;
   }
 
   return (
     <View style={styles.container}>
+      {/* Custom Back Button */}
+      <TouchableOpacity 
+        style={styles.backButton}
+        onPress={() => router.back()}
+      >
+        <MaterialCommunityIcons name="keyboard-return" size={24} color="#FE7F2D" />
+      </TouchableOpacity>
+
       {/* Logo */}
       <Image
         source={require("../assets/images/logo/smartbites-high-resolution-logo-transparent.png")}
         style={styles.logo}
       />
 
-      {/* Title */}
+      {/* Title and Subtitle */}
       <Text style={styles.title}>Password Reset</Text>
       <Text style={styles.subtitle}>
-        Provide the email address associated with your account to recover your
-        password
+        Provide the email address associated with your account to recover your password
       </Text>
 
       {/* Email Input */}
-      <Text style={styles.label}>Email</Text>
+      <Text style={styles.label}>Email Address:</Text>
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
           placeholder="Email Address"
           placeholderTextColor="#B0B0B0"
+          keyboardType="email-address"
+          autoCapitalize="none"
         />
       </View>
 
@@ -51,7 +58,7 @@ const ForgotPasswordScreen: React.FC = () => {
 
       {/* Signup Link */}
       <View style={styles.signupContainer}>
-        <Text style={styles.signupText}>Don’t have an account? </Text>
+        <Text style={styles.signupText}>Don't have an account? </Text>
         <TouchableOpacity onPress={() => router.push("/sign_up")}>
           <Text style={styles.signupLink}>Sign Up</Text>
         </TouchableOpacity>
@@ -67,6 +74,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 50,
+  },
+  backButton: {
+    position: "absolute",
+    top: 50,
+    left: 20,
+    zIndex: 1,
   },
   logo: {
     width: 120,
@@ -87,6 +100,7 @@ const styles = StyleSheet.create({
     color: "#B0B0B0",
     textAlign: "center",
     marginBottom: 20,
+    paddingHorizontal: 20,
   },
   label: {
     alignSelf: "flex-start",
@@ -132,10 +146,11 @@ const styles = StyleSheet.create({
   signupText: {
     fontSize: 14,
     fontFamily: "IstokWeb-Bold",
-    color: "#B0B0B0",
+    color: "#FBFCF8",
   },
   signupLink: {
-    color: "#FE7F2D",
+    color: "#E0FF4F",
+    fontWeight: "bold",
     fontFamily: "IstokWeb-Bold",
   },
   loader: {
