@@ -1,11 +1,44 @@
 from django.db import models
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.conf import settings
 
-# Create your models here.
-from django.contrib.auth.models import User  # Default Django User model
+# Custom User Manager
+class CustomUserManager(BaseUserManager):
+    def create_user(self, email, password=None, **extra_fields):
+        if not email:
+            raise ValueError('The Email field must be set')
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, email, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        return self.create_user(email, password, **extra_fields)
+
+# Custom User Model
+class CustomUser(AbstractBaseUser, PermissionsMixin):
+    email = models.EmailField(unique=True)
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+
+    objects = CustomUserManager()
+
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = []
+
+    class Meta:
+        verbose_name = "User"
+        verbose_name_plural = "Users"  # This changes the display name in the admin panel
+
+    def __str__(self):
+        return self.email
 
 # User Profiles
 class UserProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     dietary_preference = models.CharField(max_length=100, choices=[
         ('vegan', 'Vegan'),
         ('keto', 'Keto'),
@@ -13,19 +46,18 @@ class UserProfile(models.Model):
         ('omnivore', 'Omnivore'),
     ], default='omnivore')
     allergies = models.TextField(blank=True, null=True)
-    # calories = models.IntegerField(blank=True, null=True)  # Commented out for now
 
     def __str__(self):
-        return self.user.username
+        return self.user.email  # Use email since username is removed
 
 # Saved Recipes
 class Recipe(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)  # Links recipe to a user
-    title = models.CharField(max_length=255)  # Recipe title
-    ingredients = models.TextField()  # Ingredients list (as a text)
-    instructions = models.TextField()  # Cooking instructions
-    image_url = models.URLField(blank=True, null=True)  # Optional image link
-    saved_at = models.DateTimeField(auto_now_add=True)  # When the recipe was saved
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    title = models.CharField(max_length=255)
+    ingredients = models.TextField()
+    instructions = models.TextField()
+    image_url = models.URLField(blank=True, null=True)
+    saved_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.title
