@@ -1,10 +1,22 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, Alert, StyleSheet } from 'react-native';
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  TouchableOpacity, 
+  Image, 
+  Alert, 
+  StyleSheet, 
+  Platform,
+  ScrollView,
+  KeyboardAvoidingView
+} from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { Camera } from 'expo-camera';
-import { CameraType } from 'expo-image-picker';
+import { CameraView, useCameraPermissions, CameraType, CameraCapturedPicture } from 'expo-camera';
+import { AntDesign, MaterialIcons } from '@expo/vector-icons';
+import PhotoPreviewSection from './photo_preview_section';
 
-interface ProfileData {
+interface Profile {
   name: string;
   email: string;
   currentPassword: string;
@@ -13,22 +25,17 @@ interface ProfileData {
   profilePicture: string | null;
 }
 
-type CameraTypeRef = {
-  takePictureAsync: (options?: { 
-    quality?: number; 
-    base64?: boolean; 
-    exif?: boolean 
-  }) => Promise<{
-    uri: string;
-    width: number;
-    height: number;
-    exif?: any;
-    base64?: string;
-  }>;
-};
+interface Errors {
+  name?: string;
+  email?: string;
+  currentPassword?: string;
+  newPassword?: string;
+  confirmPassword?: string;
+  profilePicture?: string;
+}
 
 const ProfileEdit: React.FC = () => {
-  const [profile, setProfile] = useState<ProfileData>({
+  const [profile, setProfile] = useState<Profile>({
     name: 'John Doe',
     email: 'john@example.com',
     currentPassword: '',
@@ -36,34 +43,34 @@ const ProfileEdit: React.FC = () => {
     confirmPassword: '',
     profilePicture: null,
   });
-  const [errors, setErrors] = useState<Partial<ProfileData>>({});
-  const [isPasswordEditing, setIsPasswordEditing] = useState(false);
-  const [showCamera, setShowCamera] = useState(false);
-  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
-  const [cameraType, setCameraType] = useState(ImagePicker.CameraType.back);
-  const cameraRef = useRef<CameraTypeRef>(null);
+  const [errors, setErrors] = useState<Errors>({});
+  const [isPasswordEditing, setIsPasswordEditing] = useState<boolean>(false);
+  const [showCamera, setShowCamera] = useState<boolean>(false);
+  const [photoPreview, setPhotoPreview] = useState<CameraCapturedPicture | null>(null);
+  const [cameraType, setCameraType] = useState<CameraType>('front');
+  const [permission, requestPermission] = useCameraPermissions();
+  const cameraRef = useRef<CameraView>(null);
 
   useEffect(() => {
-    (async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasCameraPermission(status === 'granted');
-    })();
-  }, []);
+    if (permission && !permission.granted) {
+      setShowCamera(false);
+    }
+  }, [permission]);
 
-  const handleChange = (field: keyof ProfileData, value: string) => {
+  const handleChange = (field: keyof Profile, value: string) => {
     setProfile(prev => ({ ...prev, [field]: value }));
     
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
+    if (errors[field as keyof Errors]) {
+      setErrors(prev => ({ ...prev, [field]: undefined }));
     }
 
-    if (field === 'newPassword' || field === 'currentPassword') {
+    if (field === 'newPassword' || field === 'confirmPassword' || field === 'currentPassword') {
       setIsPasswordEditing(true);
     }
   };
 
   const validate = (): boolean => {
-    const newErrors: Partial<ProfileData> = {};
+    const newErrors: Errors = {};
 
     if (isPasswordEditing) {
       if (!profile.currentPassword) {
@@ -76,6 +83,7 @@ const ProfileEdit: React.FC = () => {
       
       if (profile.newPassword !== profile.confirmPassword) {
         newErrors.confirmPassword = 'Passwords do not match';
+        Alert.alert('Password Mismatch', 'The new password and confirm password fields do not match.');
       }
     }
 
@@ -96,7 +104,7 @@ const ProfileEdit: React.FC = () => {
   const handleSubmit = () => {
     if (!validate()) return;
 
-    const updatedFields: Partial<ProfileData> = {};
+    const updatedFields: Partial<Profile> = {};
     
     if (profile.name !== 'John Doe') {
       updatedFields.name = profile.name;
@@ -132,51 +140,77 @@ const ProfileEdit: React.FC = () => {
         setProfile(prev => ({ ...prev, profilePicture: result.assets[0].uri }));
       }
     } else {
-      if (hasCameraPermission) {
-        setShowCamera(true);
-      } else {
-        Alert.alert('Permission required', 'Camera access is needed to take photos');
+      if (Platform.OS === 'web') {
+        Alert.alert('Not supported', 'Camera is not supported on web');
+        return;
       }
-    }
-  };
 
-  const takePicture = async () => {
-    if (cameraRef.current) {
-      try {
-        const photo = await cameraRef.current.takePictureAsync({
-          quality: 0.8,
-          base64: false,
-        });
-        setProfile(prev => ({ ...prev, profilePicture: photo.uri }));
-        setShowCamera(false);
-      } catch (error) {
-        console.error('Error taking picture:', error);
-        Alert.alert('Error', 'Failed to take picture');
+      const { granted } = await requestPermission();
+      if (!granted) {
+        Alert.alert('Permission required', 'Camera access is needed to take photos');
+        return;
       }
+      setShowCamera(true);
     }
   };
 
   const toggleCameraType = () => {
-    setCameraType(current => (
-      current === ImagePicker.CameraType.back ? CameraType.front : CameraType.back
-    ));
+    setCameraType(current => (current === 'back' ? 'front' : 'back'));
   };
 
-  if (showCamera) {
-    if (hasCameraPermission === null) {
-      return <View style={styles.container} />;
+  const handleTakePhoto = async () => {
+    if (cameraRef.current) {
+      try {
+        const photo = await cameraRef.current.takePictureAsync({
+          quality: 1,
+          base64: true,
+          exif: false,
+        });
+        
+        if (photo) {
+          setPhotoPreview(photo);
+          setShowCamera(false);
+        }
+      } catch (error) {
+        console.error('Error taking photo:', error);
+        Alert.alert('Error', 'Failed to take photo');
+      }
     }
-    if (hasCameraPermission === false) {
+  };
+
+  const handleAcceptPhoto = () => {
+    if (photoPreview?.uri) {
+      setProfile(prev => ({ ...prev, profilePicture: photoPreview.uri }));
+      setPhotoPreview(null);
+    }
+  };
+
+  const handleRetakePhoto = () => {
+    setPhotoPreview(null);
+    setShowCamera(true);
+  };
+
+  if (photoPreview) {
+    return (
+      <PhotoPreviewSection 
+        photo={photoPreview}
+        handleRetakePhoto={handleRetakePhoto}
+        handleAcceptPhoto={handleAcceptPhoto}
+      />
+    );
+  }
+
+  if (showCamera) {
+    if (!permission) {
+      return <View />;
+    }
+
+    if (!permission.granted) {
       return (
         <View style={styles.cameraPermissionContainer}>
-          <Text style={styles.permissionText}>
-            We need your permission to show the camera
-          </Text>
+          <Text style={styles.permissionText}>We need your permission to show the camera</Text>
           <TouchableOpacity 
-            onPress={async () => {
-              const { status } = await Camera.requestCameraPermissionsAsync();
-              setHasCameraPermission(status === 'granted');
-            }} 
+            onPress={requestPermission} 
             style={styles.permissionButton}
           >
             <Text style={styles.permissionButtonText}>Grant Permission</Text>
@@ -193,88 +227,94 @@ const ProfileEdit: React.FC = () => {
 
     return (
       <View style={styles.cameraContainer}>
-        <Camera
-          type={cameraType}
-          // @ts-ignore - Workaround for Expo Camera typing issue
-          ref={ref => (cameraRef.current = ref)}
-          style={styles.camera}
+        <CameraView 
+          style={styles.camera} 
+          facing={cameraType}
+          ref={cameraRef}
         >
-          <View style={styles.cameraControls}>
-            <TouchableOpacity
-              style={styles.flipButton}
-              onPress={toggleCameraType}
-            >
-              <Text style={styles.flipButtonText}>Flip</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setShowCamera(false)}
-            >
-              <Text style={styles.closeButtonText}>✕</Text>
-            </TouchableOpacity>
-          </View>
           <View style={styles.cameraButtonContainer}>
-            <TouchableOpacity
-              style={styles.captureButton}
-              onPress={takePicture}
-            >
-              <View style={styles.captureButtonInner} />
-            </TouchableOpacity>
+            <View style={styles.cameraButtonRow}>
+              <TouchableOpacity 
+                style={styles.cameraControlButton} 
+                onPress={() => setShowCamera(false)}
+              >
+                <AntDesign name='close' size={24} color='white' />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.cameraMainButton} 
+                onPress={handleTakePhoto}
+              >
+                <View style={styles.cameraMainButtonInner} />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.cameraControlButton} 
+                onPress={toggleCameraType}
+              >
+                <MaterialIcons name='flip-camera-ios' size={24} color='white' />
+              </TouchableOpacity>
+            </View>
           </View>
-        </Camera>
+        </CameraView>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Edit Profile</Text>
-      
-      <View style={styles.profilePictureContainer}>
-        <Image
-          source={profile.profilePicture ? { uri: profile.profilePicture } : require('../assets/default-profile.png')}
-          style={styles.profilePicture}
-        />
-        <View style={styles.profilePictureButtons}>
-          <TouchableOpacity 
-            style={styles.pictureButton} 
-            onPress={() => pickImage('gallery')}
-          >
-            <Text style={styles.buttonText}>Gallery</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.pictureButton} 
-            onPress={() => pickImage('camera')}
-          >
-            <Text style={styles.buttonText}>Camera</Text>
-          </TouchableOpacity>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
+    >
+      <ScrollView 
+        contentContainerStyle={styles.scrollContainer}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Text style={styles.title}>Edit Profile</Text>
+        
+        <View style={styles.profilePictureContainer}>
+          <Image
+            source={profile.profilePicture ? { uri: profile.profilePicture } : require('../assets/default-profile.png')}
+            style={styles.profilePicture}
+          />
+          <View style={styles.profilePictureButtons}>
+            <TouchableOpacity 
+              style={styles.pictureButton} 
+              onPress={() => pickImage('gallery')}
+            >
+              <Text style={styles.buttonText}>Gallery</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.pictureButton} 
+              onPress={() => pickImage('camera')}
+            >
+              <Text style={styles.buttonText}>Camera</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
 
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>Name</Text>
-        <TextInput
-          style={[styles.input, errors.name && styles.errorInput]}
-          value={profile.name}
-          onChangeText={(text) => handleChange('name', text)}
-          placeholder="Enter your name"
-        />
-        {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
-      </View>
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Name</Text>
+          <TextInput
+            style={[styles.input, errors.name && styles.errorInput]}
+            value={profile.name}
+            onChangeText={(text) => handleChange('name', text)}
+            placeholder="Enter your name"
+          />
+          {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
+        </View>
 
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>Email</Text>
-        <TextInput
-          style={[styles.input, errors.email && styles.errorInput]}
-          value={profile.email}
-          onChangeText={(text) => handleChange('email', text)}
-          keyboardType="email-address"
-          placeholder="Enter your email"
-        />
-        {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
-      </View>
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            style={[styles.input, errors.email && styles.errorInput]}
+            value={profile.email}
+            onChangeText={(text) => handleChange('email', text)}
+            keyboardType="email-address"
+            placeholder="Enter your email"
+          />
+          {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+        </View>
 
-      {(isPasswordEditing || profile.currentPassword) && (
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Current Password</Text>
           <TextInput
@@ -286,21 +326,19 @@ const ProfileEdit: React.FC = () => {
           />
           {errors.currentPassword && <Text style={styles.errorText}>{errors.currentPassword}</Text>}
         </View>
-      )}
 
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>New Password</Text>
-        <TextInput
-          style={[styles.input, errors.newPassword && styles.errorInput]}
-          value={profile.newPassword}
-          onChangeText={(text) => handleChange('newPassword', text)}
-          secureTextEntry
-          placeholder="Enter new password (min 8 chars)"
-        />
-        {errors.newPassword && <Text style={styles.errorText}>{errors.newPassword}</Text>}
-      </View>
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>New Password</Text>
+          <TextInput
+            style={[styles.input, errors.newPassword && styles.errorInput]}
+            value={profile.newPassword}
+            onChangeText={(text) => handleChange('newPassword', text)}
+            secureTextEntry
+            placeholder="Enter new password (min 8 chars)"
+          />
+          {errors.newPassword && <Text style={styles.errorText}>{errors.newPassword}</Text>}
+        </View>
 
-      {profile.newPassword && (
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Confirm New Password</Text>
           <TextInput
@@ -312,20 +350,23 @@ const ProfileEdit: React.FC = () => {
           />
           {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
         </View>
-      )}
 
-      <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-        <Text style={styles.submitButtonText}>Save Changes</Text>
-      </TouchableOpacity>
-    </View>
+        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+          <Text style={styles.submitButtonText}>Save Changes</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
     backgroundColor: '#fff',
+  },
+  scrollContainer: {
+    padding: 20,
+    paddingBottom: 40, // Extra padding at bottom for scroll
   },
   title: {
     fontSize: 24,
@@ -385,6 +426,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     alignItems: 'center',
     marginTop: 20,
+    marginBottom: 20,
   },
   submitButtonText: {
     color: '#fff',
@@ -393,67 +435,49 @@ const styles = StyleSheet.create({
   },
   cameraContainer: {
     flex: 1,
-    backgroundColor: 'black',
+    justifyContent: 'center',
   },
   camera: {
     flex: 1,
-    justifyContent: 'flex-end',
   },
-  cameraControls: {
+  cameraButtonContainer: {
     position: 'absolute',
-    top: 40,
-    right: 20,
+    bottom: 40,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  cameraButtonRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    width: '100%',
-    paddingHorizontal: 20,
-  },
-  flipButton: {
+    width: '80%',
     backgroundColor: 'rgba(0,0,0,0.5)',
-    padding: 10,
-    borderRadius: 5,
+    borderRadius: 30,
+    paddingVertical: 15,
+    paddingHorizontal: 25,
   },
-  flipButtonText: {
-    color: '#fff',
-    fontSize: 16,
-  },
-  closeButton: {
-    backgroundColor: 'rgba(0,0,0,0.5)',
+  cameraControlButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  closeButtonText: {
-    color: '#fff',
-    fontSize: 20,
-  },
-  cameraButtonContainer: {
-    flex: 1,
-    backgroundColor: 'transparent',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'flex-end',
-    marginBottom: 40,
-  },
-  captureButton: {
-    alignSelf: 'center',
+  cameraMainButton: {
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: '#fff',
+    borderWidth: 3,
+    borderColor: 'white',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
   },
-  captureButtonInner: {
+  cameraMainButtonInner: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#fff',
-    borderWidth: 2,
-    borderColor: '#007AFF',
+    backgroundColor: 'white',
   },
   cameraPermissionContainer: {
     flex: 1,

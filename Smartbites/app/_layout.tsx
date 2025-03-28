@@ -13,6 +13,7 @@ export default function RootLayout() {
         <Stack.Screen name="forgot_password_1" options={{ headerShown: false }} />
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="sign_up" options={{ headerShown: false }} />
+        <Stack.Screen name="profile_edit" options={{ headerShown: false }} />
 
         {/* Main App Screens */}
         <Stack.Screen name="home" options={{ headerShown: false, gestureEnabled: false }} />
