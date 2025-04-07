@@ -6,9 +6,12 @@ import Login from "./login";
 import SignUp from "./sign_up";
 import { createStackNavigator } from "@react-navigation/stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { Ionicons } from '@expo/vector-icons';
 import ForgotPassword from "./forgot_password_1";
 import Home from "./home";
-import { useNavigation } from "expo-router";
+import Profile from "./profile";
+import ProfileEdit from "./profile_edit";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const AuthStack = createStackNavigator();
 const MainTab = createBottomTabNavigator();
@@ -16,15 +19,57 @@ const RootStack = createStackNavigator();
 
 function MainApp() {
   return (
-    <MainTab.Navigator>
-      <MainTab.Screen name="Home" component={Home} />
+    <MainTab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName: keyof typeof Ionicons.glyphMap;
+
+          if (route.name === 'Home') {
+            iconName = focused ? 'home' : 'home-outline';
+          } else if (route.name === 'Profile') {
+            iconName = focused ? 'person' : 'person-outline';
+          } else {
+            iconName = 'alert-circle-outline'; // default icon
+          }
+
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: '#FE7F2D',
+        tabBarInactiveTintColor: 'gray',
+        tabBarStyle: {
+          backgroundColor: '#00272B',
+          borderTopWidth: 0,
+        },
+        headerShown: false
+      })}
+    >
+      <MainTab.Screen 
+        name="Home" 
+        component={Home} 
+        options={{ title: 'Home' }}
+      />
+      <MainTab.Screen 
+        name="Profile" 
+        component={Profile} 
+        options={{ title: 'Profile' }}
+      />
     </MainTab.Navigator>
   );
 }
 
 function AuthScreens() {
   return (
-    <AuthStack.Navigator>
+    <AuthStack.Navigator
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: '#00272B',
+        },
+        headerTintColor: '#fff',
+        headerTitleStyle: {
+          fontWeight: 'bold',
+        },
+      }}
+    >
       <AuthStack.Screen
         name="Login"
         component={Login}
@@ -49,9 +94,20 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
+    const checkAuthStatus = async () => {
+      try {
+        const token = await AsyncStorage.getItem("authToken");
+        setIsLoggedIn(!!token);
+      } catch (error) {
+        console.error("Error checking auth status:", error);
+      }
+    };
+
     const timer = setTimeout(() => {
       setIsShowSplash(false);
-    }, 3000); // 3 seconds
+      checkAuthStatus();
+    }, 3000);
+
     return () => clearTimeout(timer);
   }, []);
 
@@ -59,25 +115,46 @@ export default function App() {
     return (
       <View style={styles.container}>
         <SplashScreen />
-        <StatusBar style="auto" />
+        <StatusBar style="light" />
       </View>
     );
   }
 
-  // With expo-router, you should use their navigation system
-  // Remove the NavigationContainer and use their routing instead
-  // This is a simplified version - you might need to adjust based on your exact expo-router setup
-
   return (
     <View style={styles.container}>
-      <RootStack.Navigator screenOptions={{ headerShown: false }}>
+      <RootStack.Navigator>
         {isLoggedIn ? (
-          <RootStack.Screen name="MainApp" component={MainApp} />
+          <RootStack.Group>
+            <RootStack.Screen 
+              name="MainApp" 
+              component={MainApp} 
+              options={{ headerShown: false }}
+            />
+            <RootStack.Screen 
+              name="ProfileEdit" 
+              component={ProfileEdit} 
+              options={{ 
+                headerShown: true, 
+                title: 'Edit Profile',
+                headerStyle: {
+                  backgroundColor: '#00272B',
+                },
+                headerTintColor: '#fff',
+                headerTitleStyle: {
+                  fontWeight: 'bold',
+                },
+              }} 
+            />
+          </RootStack.Group>
         ) : (
-          <RootStack.Screen name="Auth" component={AuthScreens} />
+          <RootStack.Screen 
+            name="Auth" 
+            component={AuthScreens} 
+            options={{ headerShown: false }}
+          />
         )}
       </RootStack.Navigator>
-      <StatusBar style="auto" />
+      <StatusBar style="light" />
     </View>
   );
 }
@@ -85,5 +162,6 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#00272B',
   },
 });

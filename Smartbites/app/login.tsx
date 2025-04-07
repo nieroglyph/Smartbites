@@ -36,7 +36,7 @@ const LoginScreen: React.FC = () => {
 
     setLoading(true);
     try {
-      const response = await fetch("http://<IPADDRESS:8000>/api/login/", {
+      const response = await fetch("http://192.168.170.150:8000/api/login/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

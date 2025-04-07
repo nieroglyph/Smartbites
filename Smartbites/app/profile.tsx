@@ -36,8 +36,14 @@ const ProfileScreen = () => {
     );
   }
 
+  const profile = {
+    profilePicture: null, // Set to null to use default image
+    name: "Mark Denzel Permison",
+    accountNumber: "0123456789"
+  };
+
   const settingsData: SettingItemProps[] = [
-    { icon: "person-outline", label: "Profile settings" },
+    { icon: "person-outline", label: "Account settings" },
     { icon: "card-outline", label: "My cards" },
     { icon: "settings-outline", label: "Application settings" },
     { icon: "information-circle-outline", label: "FAQ/Support" },
@@ -52,8 +58,7 @@ const ProfileScreen = () => {
       const token = await AsyncStorage.getItem("authToken");
       if (!token) return;
   
-      // Send logout request to Django
-      await fetch("http://<IPADDRESS:8000>/api/logout/", {
+      await fetch("http://192.168.170.150:8000/api/logout/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -61,10 +66,7 @@ const ProfileScreen = () => {
         },
       });
   
-      // Remove token from AsyncStorage
       await AsyncStorage.removeItem("authToken");
-  
-      // Navigate to the logout splash screen
       router.push("/logout_splashscreen");
     } catch (error) {
       console.error("Logout failed:", error);
@@ -83,11 +85,6 @@ const ProfileScreen = () => {
           <MaterialCommunityIcons name="keyboard-return" size={24} color="#FE7F2D" />
         </TouchableOpacity>
         
-        <Image 
-          source={require('../assets/images/logo/smartbites-high-resolution-logo-transparent.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
       </View>
 
       {/* Content Container */}
@@ -96,12 +93,20 @@ const ProfileScreen = () => {
           {/* Profile Container */}
           <View style={styles.profileContainer}>
             <View style={styles.profileHeader}>
-              <View style={styles.avatar} />
-              <View style={styles.profileInfo}>
-                <Text style={styles.userName}>Mark Denzel Permison</Text>
-                <Text style={styles.accountNumber}>Account number: 0123456789</Text>
+              <View style={styles.profilePictureContainer}>
+                <Image
+                  source={profile.profilePicture ? { uri: profile.profilePicture } : require('../assets/default-profile.png')}
+                  style={styles.profilePicture}
+                />
               </View>
-              <TouchableOpacity activeOpacity={0.7}>
+              <View style={styles.profileInfo}>
+                <Text style={styles.userName}>{profile.name}</Text>
+                <Text style={styles.accountNumber}>Account number: {profile.accountNumber}</Text>
+              </View>
+              <TouchableOpacity 
+                activeOpacity={0.7}
+                onPress={() => router.push('/profile_edit')}
+              >
                 <Ionicons name="create-outline" size={24} color="#FE7F2D" />
               </TouchableOpacity>
             </View>
@@ -190,12 +195,13 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  avatar: {
+  profilePictureContainer: {
+    marginRight: 15,
+  },
+  profilePicture: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: "#ECF0F1",
-    marginRight: 15,
   },
   profileInfo: {
     flex: 1,
