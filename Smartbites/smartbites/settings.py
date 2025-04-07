@@ -89,7 +89,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'smartbites',
         'USER': 'root',
-        'PASSWORD': '<password mo>',
+        'PASSWORD': 'hyeju1113',
         'HOST': 'localhost',
         'PORT': '3306',
     }
@@ -144,4 +144,5 @@ AUTH_USER_MODEL = 'api.CustomUser'  # Replace 'yourapp' with your app name
 # ]
 
 ALLOWED_HOSTS = ['http://localhost:3000',
-                 '127.0.0.1',]  # Or ['your-local-ip']
+                 '127.0.0.1',
+                 '192.168.100.10',]  # Or ['your-local-ip']
