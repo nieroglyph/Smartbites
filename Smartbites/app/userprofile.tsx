@@ -1,10 +1,24 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Image, Modal,TextInput } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  ScrollView, 
+  ActivityIndicator, 
+  Modal,
+  TextInput,
+  Animated,
+  Pressable,
+  TouchableWithoutFeedback,
+  Easing
+} from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { BlurView } from 'expo-blur';
 
 type IoniconsName = 
   | 'person-outline' 
@@ -13,12 +27,14 @@ type IoniconsName =
   | 'log-out-outline'
   | 'create-outline'
   | 'chevron-forward'
-  | 'settings-outline';
+  | 'settings-outline'
+  | 'close';
 
 type MaterialCommunityIcons = 
   | 'food-variant'
   | 'cash'
-  | 'allergy';
+  | 'allergy'
+  | 'keyboard-return';
 
 interface SettingItemProps {
   icon: IoniconsName;
@@ -38,6 +54,40 @@ const UserprofileScreen = () => {
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
   const [newAllergy, setNewAllergy] = useState('');
   const [showAllergiesModal, setShowAllergiesModal] = useState(false);
+
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (showAllergiesModal) {
+      Animated.parallel([
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 200,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(scaleAnim, {
+          toValue: 0.8,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 0,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [showAllergiesModal]);
 
   if (!fontsLoaded) {
     return (
@@ -59,6 +109,13 @@ const UserprofileScreen = () => {
     setSelectedAllergies(selectedAllergies.filter(allergy => allergy !== allergyToRemove));
   };
 
+  const handleAddAllergy = () => {
+    if (newAllergy && !selectedAllergies.includes(newAllergy)) {
+      setSelectedAllergies([...selectedAllergies, newAllergy]);
+      setNewAllergy('');
+    }
+  };
+
   return (
     <View style={styles.mainContainer}>
       <View style={styles.headerContainer}>
@@ -69,12 +126,6 @@ const UserprofileScreen = () => {
         >
           <MaterialCommunityIcons name="keyboard-return" size={24} color="#FE7F2D" />
         </TouchableOpacity>
-        
-        <Image 
-          source={require('../assets/images/logo/smartbites-high-resolution-logo-transparent.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
       </View>
 
       <View style={styles.contentContainer}>
@@ -86,46 +137,37 @@ const UserprofileScreen = () => {
                 <Text style={styles.userName}>Mark Denzel Permison</Text>
                 <Text style={styles.accountNumber}>Account number: 0123456789</Text>
               </View>
-              <TouchableOpacity activeOpacity={0.7}>
-                <Ionicons name="create-outline" size={24} color="#FE7F2D" />
-              </TouchableOpacity>
             </View>
           </View>
 
           <View style={styles.settingsContainer}>
-            <TouchableOpacity
-              style={styles.settingItem}
-              activeOpacity={0.7}
-            >
+            <View style={styles.settingItem}>
               <MaterialCommunityIcons name="cash" size={22} color="#FE7F2D" />
               <Text style={styles.settingText}>Allowance</Text>
               <Picker
                 selectedValue={selectedAllowance}
                 style={styles.picker}
-                onValueChange={(itemValue: string) => setSelectedAllowance(itemValue)} // Fixed type annotation here
+                onValueChange={(itemValue: string) => setSelectedAllowance(itemValue)}
               >
                 <Picker.Item label="Weekly" value="Weekly" />
                 <Picker.Item label="Monthly" value="Monthly" />
               </Picker>
-            </TouchableOpacity>
+            </View>
 
-            <TouchableOpacity
-              style={styles.settingItem}
-              activeOpacity={0.7}
-            >
+            <View style={styles.settingItem}>
               <MaterialCommunityIcons name="food-variant" size={22} color="#FE7F2D" />
               <Text style={styles.settingText}>Dietary Preference</Text>
               <Picker
                 selectedValue={selectedDiet}
                 style={styles.picker}
-                onValueChange={(itemValue: string) => setSelectedDiet(itemValue)} // Fixed type annotation here
+                onValueChange={(itemValue: string) => setSelectedDiet(itemValue)}
               >
                 <Picker.Item label="Vegan" value="Vegan" />
                 <Picker.Item label="Keto" value="Keto" />
                 <Picker.Item label="Vegetarian" value="Vegetarian" />
                 <Picker.Item label="Omnivore" value="Omnivore" />
               </Picker>
-            </TouchableOpacity>
+            </View>
 
             <TouchableOpacity
               style={styles.settingItem}
@@ -166,59 +208,78 @@ const UserprofileScreen = () => {
       
       <Modal
         visible={showAllergiesModal}
-        animationType="slide"
+        animationType="fade"
         transparent={true}
         onRequestClose={() => setShowAllergiesModal(false)}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Allergies</Text>
-            {commonAllergies.map((allergy, index) => (
-              <TouchableOpacity
-                key={index}
-                style={[ 
-                  styles.allergyItem,
-                  selectedAllergies.includes(allergy) && styles.selectedAllergy,
-                ]}
-                onPress={() => {
-                  if (selectedAllergies.includes(allergy)) {
-                    setSelectedAllergies(selectedAllergies.filter(item => item !== allergy));
-                  } else {
-                    setSelectedAllergies([...selectedAllergies, allergy]);
+        <TouchableWithoutFeedback onPress={() => setShowAllergiesModal(false)}>
+          <BlurView
+            style={styles.blurView}
+            intensity={20}
+            tint="dark"
+          >
+            <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+              <Animated.View 
+                style={[
+                  styles.animatedModalView,
+                  {
+                    transform: [{ scale: scaleAnim }],
+                    opacity: opacityAnim,
                   }
-                }}
-                activeOpacity={0.7}
+                ]}
               >
-                <Text style={styles.allergyText}>{allergy}</Text>
-              </TouchableOpacity>
-            ))}
-            <TextInput
-              style={styles.inputAllergy}
-              value={newAllergy}
-              onChangeText={setNewAllergy}
-              placeholder="Add custom allergy"
-              placeholderTextColor="#7F8C8D"
-            />
-            <TouchableOpacity
-              style={styles.closeModalButton}
-              onPress={() => {
-                if (newAllergy) {
-                  setSelectedAllergies([...selectedAllergies, newAllergy]);
-                  setNewAllergy('');
-                }
-                setShowAllergiesModal(false);
-              }}
-            >
-              <Text style={styles.closeModalText}>Add</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.closeModalButton}
-              onPress={() => setShowAllergiesModal(false)}
-            >
-              <Text style={styles.closeModalText}>Close</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+                <View style={styles.modalContent}>
+                  <Text style={styles.modalTitle}>Select Allergies</Text>
+                  
+                  {commonAllergies.map((allergy, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={[ 
+                        styles.allergyItem,
+                        selectedAllergies.includes(allergy) && styles.selectedAllergy,
+                      ]}
+                      onPress={() => {
+                        if (selectedAllergies.includes(allergy)) {
+                          setSelectedAllergies(selectedAllergies.filter(item => item !== allergy));
+                        } else {
+                          setSelectedAllergies([...selectedAllergies, allergy]);
+                        }
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.allergyText, selectedAllergies.includes(allergy) && styles.selectedAllergyText]}>{allergy}</Text>
+                    </TouchableOpacity>
+                  ))}
+                  
+                  <View style={styles.addAllergyContainer}>
+                    <TextInput
+                      style={styles.inputAllergy}
+                      value={newAllergy}
+                      onChangeText={setNewAllergy}
+                      placeholder="Add custom allergy"
+                      placeholderTextColor="#7F8C8D"
+                    />
+                    <TouchableOpacity
+                      style={styles.addButton}
+                      onPress={handleAddAllergy}
+                    >
+                      <Ionicons name="add" size={24} color="#FE7F2D" />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.modalButtonContainer}>
+                    <Pressable
+                      style={[styles.modalButton, styles.modalButtonClose]}
+                      onPress={() => setShowAllergiesModal(false)}
+                    >
+                      <Text style={styles.modalButtonText}>Close</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              </Animated.View>
+            </TouchableWithoutFeedback>
+          </BlurView>
+        </TouchableWithoutFeedback>
       </Modal>
     </View>
   );
@@ -238,10 +299,6 @@ const styles = StyleSheet.create({
   },
   returnButton: {
     marginRight: 15,
-  },
-  logo: {
-    width: 120,
-    height: 40,
   },
   contentContainer: {
     flex: 1,
@@ -353,25 +410,42 @@ const styles = StyleSheet.create({
   },
   allergyText: {
     fontSize: 14,
+    color: '#fff',
+  },
+  selectedAllergyText: {
     color: '#000',
   },
-  modalContainer: {
+  blurView: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  animatedModalView: {
+    width: '90%',
+    maxWidth: 400,
   },
   modalContent: {
-    width: "80%",
-    backgroundColor: "#FBFCF8",
+    width: "100%",
+    backgroundColor: "#00272B",
     padding: 20,
     borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#FE7F2D',
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: "600",
     marginBottom: 10,
     color: "#FE7F2D",
+    textAlign: 'center',
   },
   allergyItem: {
     paddingVertical: 10,
@@ -384,24 +458,40 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   inputAllergy: {
+    flex: 1,
     borderBottomWidth: 1,
     borderBottomColor: "#7F8C8D",
     marginTop: 10,
     padding: 10,
     fontSize: 14,
-    color: "#2C3E50",
-  },
-  closeModalButton: {
-    marginTop: 15,
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    backgroundColor: "#FE7F2D",
-    borderRadius: 6,
-    alignItems: "center",
-  },
-  closeModalText: {
     color: "#fff",
-    fontSize: 16,
+  },
+  addAllergyContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  addButton: {
+    marginLeft: 10,
+  },
+  modalButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 20,
+  },
+  modalButton: {
+    borderRadius: 5,
+    padding: 10,
+    elevation: 2,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  modalButtonClose: {
+    backgroundColor: '#FE7F2D',
+  },
+  modalButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });
 

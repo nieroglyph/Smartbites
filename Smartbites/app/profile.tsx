@@ -43,14 +43,21 @@ const ProfileScreen = () => {
   };
 
   const settingsData: SettingItemProps[] = [
-    { icon: "person-outline", label: "Account settings" },
+    { 
+      icon: "person-outline", 
+      label: "User Profile",
+      onPress: () => router.push('/userprofile') 
+    },
     { icon: "card-outline", label: "My cards" },
     { icon: "settings-outline", label: "Application settings" },
     { icon: "information-circle-outline", label: "FAQ/Support" },
   ];
 
-  const handleSettingPress = (label: string) => {
+  const handleSettingPress = (label: string, onPress?: () => void) => {
     console.log(`Navigating to ${label}`);
+    if (onPress) {
+      onPress();
+    }
   };
 
   const handleLogout = async () => {
@@ -118,7 +125,7 @@ const ProfileScreen = () => {
               <TouchableOpacity
                 key={index}
                 style={styles.settingItem}
-                onPress={() => handleSettingPress(item.label)}
+                onPress={() => handleSettingPress(item.label, item.onPress)}
                 activeOpacity={0.7}
               >
                 <Ionicons name={item.icon} size={22} color="#FE7F2D" />
