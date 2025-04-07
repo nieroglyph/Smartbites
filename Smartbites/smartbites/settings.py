@@ -89,7 +89,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'smartbites',
         'USER': 'root',
-        'PASSWORD': '<password mo>',
+        'PASSWORD': 'hyeju1113',
         'HOST': 'localhost',
         'PORT': '3306',
     }
