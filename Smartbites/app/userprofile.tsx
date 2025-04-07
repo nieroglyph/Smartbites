@@ -64,7 +64,7 @@ const UserprofileScreen = () => {
       <View style={styles.headerContainer}>
         <TouchableOpacity 
           style={styles.returnButton}
-          onPress={() => router.push('/home')}
+          onPress={() => router.push('/profile')}
           activeOpacity={0.7}
         >
           <MaterialCommunityIcons name="keyboard-return" size={24} color="#FE7F2D" />

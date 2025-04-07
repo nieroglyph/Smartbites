@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   Button,
-  FlatList,
   TouchableOpacity,
   Image,
   StyleSheet,
@@ -144,17 +143,14 @@ const BudgetScreen = () => {
             <Text style={styles.title}>History</Text>
           </View>
 
-          <View style={styles.historyContainer}>
-            <FlatList
-              data={history}
-              renderItem={({ item }) => (
-                <Text style={styles.historyItem}>
+          <View style={styles.historyWrapper}>
+            <ScrollView style={styles.historyScroll} nestedScrollEnabled={true}>
+              {history.map((item, index) => (
+                <Text key={index} style={styles.historyItem}>
                   - ₱{item.amount} | {item.description} | {item.date}
                 </Text>
-              )}
-              keyExtractor={(item, index) => index.toString()}
-              nestedScrollEnabled={true}
-            />
+              ))}
+            </ScrollView>
           </View>
 
           <View style={styles.allowanceContainer}>
@@ -170,36 +166,22 @@ const BudgetScreen = () => {
       {/* Navigation Bar with Glow Effect on Active Tab */}
       <View style={styles.navContainer}>
         <View style={styles.navigation}>
-          <TouchableOpacity 
-            style={styles.navItem} 
-            onPress={() => router.push('/home')}
-          >
+          <TouchableOpacity style={styles.navItem} onPress={() => router.push('/home')}>
             <FontAwesomeIcon name="home" size={24} color="#FE7F2D" />
             <Text style={[styles.navText, styles.defaultFont]}>Home</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.navItem} 
-            onPress={() => router.push('/chat')}
-          >
+          <TouchableOpacity style={styles.navItem} onPress={() => router.push('/chat')}>
             <FontAwesome6Icon name="brain" size={24} color="#FE7F2D" />
             <Text style={[styles.navText, styles.defaultFont]}>Chat</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.navItem} 
-            onPress={() => router.push('/budget')}
-          >
-            <View style={styles.glowContainer}>
-              <FontAwesome6Icon name="money-bills" size={24} color="#FE7F2D" style={styles.glowIcon} />
-            </View>
+          <TouchableOpacity style={styles.navItem} onPress={() => router.push('/budget')}>
+            <FontAwesome6Icon name="money-bills" size={24} color="#FE7F2D" style={styles.glowIcon} />
             <Text style={[styles.navText, styles.defaultFont]}>Budget</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.navItem} 
-            onPress={() => router.push('/profile')}
-          >
+          <TouchableOpacity style={styles.navItem} onPress={() => router.push('/profile')}>
             <MaterialCommunityIcons name="account-settings" size={24} color="#FE7F2D" />
             <Text style={[styles.navText, styles.defaultFont]}>Profile</Text>
           </TouchableOpacity>
@@ -216,21 +198,29 @@ const styles = StyleSheet.create({
   icon: { marginRight: 10 },
   title: { color: 'white', fontSize: 18 },
   input: { backgroundColor: 'white', padding: 10, borderRadius: 5, height: 50, marginBottom: 10 },
-  expenseItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: 50, marginBottom: 10 },
+  expenseItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 50,
+    marginBottom: 10,
+  },
   expenseInput: { backgroundColor: 'white', padding: 10, borderRadius: 5, width: '40%', height: 50 },
   iconButton: { padding: 5 },
-  historyContainer: {
-    height: 200,
-    maxHeight: 400,
+  historyWrapper: {
+    height: 250,
     backgroundColor: '#fff',
     borderRadius: 10,
     padding: 10,
-    margin: 10,
+    marginVertical: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  historyScroll: {
+    flexGrow: 0,
   },
   historyItem: {
     fontSize: 16,
@@ -253,13 +243,11 @@ const styles = StyleSheet.create({
   navItem: { alignItems: 'center' },
   navText: { fontSize: 12, marginTop: 5, color: '#2E2E2E' },
   defaultFont: {},
-  glowContainer: { shadowColor: '#FE7F2D', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 1, shadowRadius: 10 },
   glowIcon: {
-    textShadowColor: '#FE7F2D',
+    textShadowColor: '#E0FF4F',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 10,
   },
 });
 
 export default BudgetScreen;
-
