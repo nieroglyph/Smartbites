@@ -11,7 +11,11 @@
             "driver": "MySQL",
             "name": "smartbites",
             "username": "root",
+<<<<<<< HEAD
             "password": "Tristan012903",
+=======
+            "password": "hyeju1113",
+>>>>>>> 26029c1ed7ddea39d530161987e511cf9fb65914
             "database": "smartbites"
         }
     ]
