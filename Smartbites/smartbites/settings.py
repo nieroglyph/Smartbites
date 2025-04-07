@@ -143,4 +143,5 @@ AUTH_USER_MODEL = 'api.CustomUser'  # Replace 'yourapp' with your app name
 #     "http://localhost:3000",  # Allow React frontend
 # ]
 
-ALLOWED_HOSTS = ['']  # Or ['your-local-ip']
+ALLOWED_HOSTS = ['http://localhost:3000',
+                 '127.0.0.1',]  # Or ['your-local-ip']
