@@ -68,25 +68,47 @@ const ChatScreen = () => {
     };
   }, []);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (message.trim() || photoPreview) {
+      // Add user message to chat
       const newUserMessage: Message = {
         id: messages.length + 1,
         text: message,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        isUser: true,
-        ...(photoPreview && { image: photoPreview })
+        isUser: true
       };
       
       setMessages([...messages, newUserMessage]);
       setMessage('');
-      setPhotoPreview(null);
-      
-      setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+  
+      try {
+        // Send message to Django backend
+        const response = await fetch('http://192.168.100.10:8000/api/query-ollama/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: message })
+        });
+  
+        if (!response.ok) throw new Error('Failed to get response from AI');
+  
+        const data = await response.json();
+  
+        // Add AI response to chat
+        const aiMessage: Message = {
+          id: messages.length + 2,
+          text: data.response, // AI response
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          isUser: false
+        };
+  
+        setMessages(prevMessages => [...prevMessages, aiMessage]);
+      } catch (error) {
+        console.error('Error fetching AI response:', error);
+        Alert.alert('Error', 'Failed to communicate with AI.');
+      }
     }
   };
+  
 
   const pickImage = async (source: 'gallery' | 'camera') => {
     if (source === 'gallery') {
