@@ -69,8 +69,8 @@ const ChatScreen = () => {
   }, []);
 
   const handleSend = async () => {
-    if (message.trim() || photoPreview) {
-      // Add user message to chat
+    if (message.trim()) {
+      // Add user's message to chat immediately
       const newUserMessage: Message = {
         id: messages.length + 1,
         text: message,
@@ -78,7 +78,7 @@ const ChatScreen = () => {
         isUser: true
       };
       
-      setMessages([...messages, newUserMessage]);
+      setMessages(prev => [...prev, newUserMessage]);
       setMessage('');
   
       try {
@@ -92,23 +92,43 @@ const ChatScreen = () => {
         if (!response.ok) throw new Error('Failed to get response from AI');
   
         const data = await response.json();
+        const fullResponse = data.response; // Full AI response
   
-        // Add AI response to chat
+        let currentText = '';
+        let index = 0;
+  
+        // Add an "empty" AI message first (to show while typing)
         const aiMessage: Message = {
           id: messages.length + 2,
-          text: data.response, // AI response
+          text: '',
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           isUser: false
         };
   
-        setMessages(prevMessages => [...prevMessages, aiMessage]);
+        setMessages(prev => [...prev, aiMessage]);
+  
+        // Typing effect: Add text letter by letter
+        const interval = setInterval(() => {
+          if (index < fullResponse.length) {
+            currentText += fullResponse[index];
+            index++;
+  
+            setMessages(prevMessages =>
+              prevMessages.map(msg =>
+                msg.id === aiMessage.id ? { ...msg, text: currentText } : msg
+              )
+            );
+          } else {
+            clearInterval(interval);
+          }
+        }, 30); // Adjust speed (milliseconds per letter)
+  
       } catch (error) {
         console.error('Error fetching AI response:', error);
         Alert.alert('Error', 'Failed to communicate with AI.');
       }
     }
-  };
-  
+  };  
 
   const pickImage = async (source: 'gallery' | 'camera') => {
     if (source === 'gallery') {
