@@ -69,43 +69,60 @@ const ChatScreen = () => {
   }, []);
 
   const handleSend = async () => {
-    if (message.trim()) {
-      // Add user's message to chat immediately
+    if (message.trim() || photoPreview) {
+      // Add user's message (text and/or image) to chat
       const newUserMessage: Message = {
         id: messages.length + 1,
         text: message,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        isUser: true
+        isUser: true,
+        ...(photoPreview && { image: photoPreview }) // Include image if available
       };
-      
+  
       setMessages(prev => [...prev, newUserMessage]);
       setMessage('');
+      setPhotoPreview(null); // Clear selected photo
+  
+      // Show a "thinking" message before AI starts responding
+      const thinkingMessage: Message = {
+        id: messages.length + 2,
+        text: 'Thinking...',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        isUser: false
+      };
+  
+      setMessages(prev => [...prev, thinkingMessage]);
   
       try {
-        // Send message to Django backend
+        const formData = new FormData();
+        formData.append('prompt', message);
+        if (photoPreview) {
+          formData.append('image', {
+            uri: photoPreview,
+            type: 'image/jpeg', // Adjust if needed
+            name: 'photo.jpg'
+          });
+        }
+  
+        // Send message and/or image to Django backend
         const response = await fetch('http://192.168.100.10:8000/api/query-ollama/', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: message })
+          headers: { 'Content-Type': 'multipart/form-data' }, // Use multipart for images
+          body: formData
         });
   
         if (!response.ok) throw new Error('Failed to get response from AI');
   
         const data = await response.json();
-        const fullResponse = data.response; // Full AI response
+        const fullResponse = data.response;
   
         let currentText = '';
         let index = 0;
   
-        // Add an "empty" AI message first (to show while typing)
-        const aiMessage: Message = {
-          id: messages.length + 2,
-          text: '',
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          isUser: false
-        };
-  
-        setMessages(prev => [...prev, aiMessage]);
+        // Replace "thinking" message with an empty message for animation
+        setMessages(prev =>
+          prev.map(msg => (msg.id === thinkingMessage.id ? { ...msg, text: '' } : msg))
+        );
   
         // Typing effect: Add text letter by letter
         const interval = setInterval(() => {
@@ -115,21 +132,21 @@ const ChatScreen = () => {
   
             setMessages(prevMessages =>
               prevMessages.map(msg =>
-                msg.id === aiMessage.id ? { ...msg, text: currentText } : msg
+                msg.id === thinkingMessage.id ? { ...msg, text: currentText } : msg
               )
             );
           } else {
             clearInterval(interval);
           }
-        }, 30); // Adjust speed (milliseconds per letter)
+        }, 30);
   
       } catch (error) {
         console.error('Error fetching AI response:', error);
         Alert.alert('Error', 'Failed to communicate with AI.');
       }
     }
-  };  
-
+  };
+  
   const pickImage = async (source: 'gallery' | 'camera') => {
     if (source === 'gallery') {
       try {

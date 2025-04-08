@@ -171,23 +171,42 @@ def recipe_search(request):
 # ollama - biteai
 import requests
 import json
+import base64
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from django.core.files.base import ContentFile
 
 @api_view(['POST'])
 def query_ollama(request):
     """API to send a request to Ollama and return a response."""
     try:
         user_prompt = request.data.get("prompt", "Hello, Ollama!")  # Get user prompt
+        image_file = request.FILES.get("image", None)  # Get uploaded image
 
-        response = requests.post("http://127.0.0.1:11434/api/generate", json={
+        if image_file:
+            # Convert image to base64
+            image_content = image_file.read()
+            encoded_image = base64.b64encode(image_content).decode("utf-8")
+        else:
+            encoded_image = None
+
+        # Prepare request data
+        ollama_payload = {
             "model": "biteai",
-            "prompt": user_prompt
-        })
+            "prompt": user_prompt,
+        }
 
+        # Add image data if available
+        if encoded_image:
+            ollama_payload["images"] = [encoded_image]
+
+        # Send request to Ollama
+        response = requests.post("http://127.0.0.1:11434/api/generate", json=ollama_payload)
         response_jsons = [json.loads(line) for line in response.text.split("\n") if line.strip()]
 
         final_response = "".join(entry["response"] for entry in response_jsons)
 
-        # Remove extra whitespace
+        # Clean up response
         cleaned_response = " ".join(final_response.split())
 
         return Response({"response": cleaned_response}, status=response.status_code)
