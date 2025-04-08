@@ -8,6 +8,8 @@ from .views import get_user_profile
 from .views import save_recipe, get_user_recipes, delete_recipe
 # Nutrition, Recipe API
 from .views import nutrition_info, recipe_search
+# ollama
+from .views import query_ollama
 
 urlpatterns = [
     path('register/', register_user, name='register'),
@@ -19,5 +21,6 @@ urlpatterns = [
     path('recipes/user', get_user_recipes, name='get_user_recipes'),
     path('recipes/delete/<int:recipe_id>/', delete_recipe, name='delete_recipe'),
     path("nutrition/", nutrition_info, name="nutrition"),
-    path("recipes/", recipe_search, name="recipes")
+    path("recipes/", recipe_search, name="recipes"),
+    path('query-ollama/', query_ollama, name='query_ollama')
 ]

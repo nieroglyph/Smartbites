@@ -167,3 +167,30 @@ def recipe_search(request):
 
     recipes = get_recipes(ingredients)
     return Response(recipes)
+
+# ollama - biteai
+import requests
+import json
+
+@api_view(['POST'])
+def query_ollama(request):
+    """API to send a request to Ollama and return a response."""
+    try:
+        user_prompt = request.data.get("prompt", "Hello, Ollama!")  # Get user prompt
+
+        response = requests.post("http://127.0.0.1:11434/api/generate", json={
+            "model": "biteai",
+            "prompt": user_prompt
+        })
+
+        response_jsons = [json.loads(line) for line in response.text.split("\n") if line.strip()]
+
+        final_response = "".join(entry["response"] for entry in response_jsons)
+
+        # Remove extra whitespace
+        cleaned_response = " ".join(final_response.split())
+
+        return Response({"response": cleaned_response}, status=response.status_code)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
