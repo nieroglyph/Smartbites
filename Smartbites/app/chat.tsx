@@ -8,7 +8,8 @@ import {
   TextInput, 
   ScrollView,
   Alert,
-  Platform
+  Platform,
+  Animated
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import FontAwesomeIcon from 'react-native-vector-icons/FontAwesome';
@@ -26,6 +27,94 @@ interface Message {
   isUser: boolean;
   image?: string;
 }
+
+const ThinkingDots = () => {
+  const dot1 = useRef(new Animated.Value(0.3)).current;
+  const dot2 = useRef(new Animated.Value(0.3)).current;
+  const dot3 = useRef(new Animated.Value(0.3)).current;
+
+  useEffect(() => {
+    const pulseInDuration = 250;
+    const pulseOutDuration = 250;
+    const delayBetween = 150;
+
+    const animation = Animated.loop(
+      Animated.stagger(delayBetween, [
+        Animated.sequence([
+          Animated.timing(dot1, {
+            toValue: 1,
+            duration: pulseInDuration,
+            useNativeDriver: true,
+          }),
+          Animated.timing(dot1, {
+            toValue: 0.3,
+            duration: pulseOutDuration,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.sequence([
+          Animated.timing(dot2, {
+            toValue: 1,
+            duration: pulseInDuration,
+            useNativeDriver: true,
+          }),
+          Animated.timing(dot2, {
+            toValue: 0.3,
+            duration: pulseOutDuration,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.sequence([
+          Animated.timing(dot3, {
+            toValue: 1,
+            duration: pulseInDuration,
+            useNativeDriver: true,
+          }),
+          Animated.timing(dot3, {
+            toValue: 0.3,
+            duration: pulseOutDuration,
+            useNativeDriver: true,
+          }),
+        ]),
+      ])
+    );
+
+    animation.start();
+    return () => animation.stop();
+  }, []);
+
+  return (
+    <View style={styles.thinkingContainer}>
+      <Animated.View style={[styles.dot, { 
+        opacity: dot1,
+        transform: [{
+          scale: dot1.interpolate({
+            inputRange: [0.3, 1],
+            outputRange: [0.9, 1.1]
+          })
+        }]
+      }]} />
+      <Animated.View style={[styles.dot, {
+        opacity: dot2,
+        transform: [{
+          scale: dot2.interpolate({
+            inputRange: [0.3, 1],
+            outputRange: [0.9, 1.1]
+          })
+        }]
+      }]} />
+      <Animated.View style={[styles.dot, {
+        opacity: dot3,
+        transform: [{
+          scale: dot3.interpolate({
+            inputRange: [0.3, 1],
+            outputRange: [0.9, 1.1]
+          })
+        }]
+      }]} />
+    </View>
+  );
+};
 
 const ChatScreen = () => {
   const router = useRouter();
@@ -45,13 +134,14 @@ const ChatScreen = () => {
   const [flashMode, setFlashMode] = useState(false);
   const [zoom, setZoom] = useState(0);
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
+  const [inputHeight, setInputHeight] = useState(16);
+  
   const cameraRef = useRef<CameraView>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   const [fontsLoaded] = useFonts({
     'IstokWeb-Regular': require('../assets/fonts/IstokWeb-Regular.ttf'),
   });
-
-  const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     (async () => {
@@ -78,13 +168,11 @@ const ChatScreen = () => {
         let remaining = line.trim();
         let hasBullet = false;
   
-        // Check for bullet point first and remove the asterisk
         if (remaining.startsWith('* ')) {
           hasBullet = true;
-          remaining = remaining.substring(2).trim(); // Remove the "* "
+          remaining = remaining.substring(2).trim();
         }
   
-        // Then process bold text
         while (remaining.includes('**')) {
           const parts = remaining.split('**');
           const before = parts[0];
@@ -136,23 +224,22 @@ const ChatScreen = () => {
   
   const handleSend = async () => {
     if (message.trim() || photoPreview) {
-      // Add user's message (text and/or image) to chat
       const newUserMessage: Message = {
         id: messages.length + 1,
         text: message,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         isUser: true,
-        ...(photoPreview && { image: photoPreview }) // Include image if available
+        ...(photoPreview && { image: photoPreview })
       };
   
       setMessages(prev => [...prev, newUserMessage]);
       setMessage('');
-      setPhotoPreview(null); // Clear selected photo
+      setPhotoPreview(null);
+      setInputHeight(16);
   
-      // Show a "thinking" message before AI starts responding
       const thinkingMessage: Message = {
         id: messages.length + 2,
-        text: 'Thinking...',
+        text: '###THINKING_ANIMATION###',
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         isUser: false
       };
@@ -163,17 +250,20 @@ const ChatScreen = () => {
         const formData = new FormData();
         formData.append('prompt', message);
         if (photoPreview) {
+          const filename = photoPreview.split('/').pop() || 'photo.jpg';
+          const match = /\.(\w+)$/.exec(filename);
+          const type = match ? `image/${match[1]}` : 'image/jpeg';
+          
           formData.append('image', {
             uri: photoPreview,
-            type: 'image/jpeg', // Adjust if needed
-            name: 'photo.jpg'
-          });
+            type,
+            name: filename
+          } as any);
         }
   
-        // Send message and/or image to Django backend
         const response = await fetch('http://192.168.100.10:8000/api/query-ollama/', {
           method: 'POST',
-          headers: { 'Content-Type': 'multipart/form-data' }, // Use multipart for images
+          headers: { 'Content-Type': 'multipart/form-data' },
           body: formData
         });
   
@@ -185,12 +275,10 @@ const ChatScreen = () => {
         let currentText = '';
         let index = 0;
   
-        // Replace "thinking" message with an empty message for animation
         setMessages(prev =>
           prev.map(msg => (msg.id === thinkingMessage.id ? { ...msg, text: '' } : msg))
         );
   
-        // Typing effect: Add text letter by letter
         const interval = setInterval(() => {
           if (index < fullResponse.length) {
             currentText += fullResponse[index];
@@ -243,7 +331,7 @@ const ChatScreen = () => {
         }
         setCameraType('back');
         setZoom(0);
-        setFlashMode(false); // Ensure flash is off when camera opens
+        setFlashMode(false);
         setShowCamera(true);
       } catch (error) {
         console.error('Camera permission error:', error);
@@ -254,7 +342,7 @@ const ChatScreen = () => {
 
   const toggleCameraType = () => {
     setCameraType(current => (current === 'front' ? 'back' : 'front'));
-    setFlashMode(false); // Turn off flash when switching cameras
+    setFlashMode(false);
   };
 
   const toggleFlash = () => {
@@ -388,7 +476,6 @@ const ChatScreen = () => {
 
   return (
     <View style={styles.container}>
-      {/* Header Section */}
       <View style={styles.header}>
         <Image
           source={require('../assets/images/logo/smartbites-high-resolution-logo-transparent.png')}
@@ -399,7 +486,6 @@ const ChatScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Chat Area */}
       <View style={styles.chatArea}>
         <ScrollView 
           ref={scrollViewRef}
@@ -412,7 +498,7 @@ const ChatScreen = () => {
               key={msg.id} 
               style={[
                 msg.isUser ? styles.userMessageContainer : styles.aiMessageContainer,
-                { marginBottom: 20 }
+                { marginBottom: 16 }
               ]}
             >
               <View style={msg.isUser ? styles.userMessage : styles.aiMessage}>
@@ -424,11 +510,13 @@ const ChatScreen = () => {
                     onError={(e) => console.log('Image load error:', e.nativeEvent.error)}
                   />
                 )}
-                {msg.text && (
+                {msg.text === '###THINKING_ANIMATION###' ? (
+                  <ThinkingDots />
+                ) : msg.text ? (
                   <Text style={[styles.messageText, styles.defaultFont]}>
                     <FormattedText text={msg.text} />
                   </Text>
-                )}
+                ) : null}
                 <Text style={[styles.messageTime, styles.defaultFont]}>{msg.time}</Text>
               </View>
             </View>
@@ -436,7 +524,6 @@ const ChatScreen = () => {
         </ScrollView>
       </View>
 
-      {/* Photo Preview */}
       {photoPreview && (
         <View style={styles.photoPreviewContainer}>
           <Image 
@@ -453,18 +540,26 @@ const ChatScreen = () => {
         </View>
       )}
 
-      {/* Input Container */}
       <View style={styles.inputWrapper}>
         <View style={styles.inputContainer}>
           <View style={styles.inputSection}>
             <View style={styles.chatboxContainer}>
               <TextInput
-                style={[styles.input, styles.defaultFont]}
+                style={[
+                  styles.input, 
+                  styles.defaultFont, 
+                  { height: Math.max(16, inputHeight) }
+                ]}
                 placeholder="Type your message..."
                 placeholderTextColor="#999"
                 multiline
                 value={message}
                 onChangeText={setMessage}
+                onContentSizeChange={(event) => {
+                  const height = event.nativeEvent.contentSize.height;
+                  const newHeight = Math.max(16, Math.ceil(height));
+                  setInputHeight(newHeight);
+                }}
                 onSubmitEditing={handleSend}
               />
               <View style={styles.mediaButtons}>
@@ -472,13 +567,13 @@ const ChatScreen = () => {
                   style={styles.mediaButton}
                   onPress={() => pickImage('camera')}
                 >
-                  <FontAwesomeIcon name="camera" size={20} color="#FE7F2D" />
+                  <FontAwesomeIcon name="camera" size={16} color="#FE7F2D" />
                 </TouchableOpacity>
                 <TouchableOpacity 
                   style={styles.mediaButton}
                   onPress={() => pickImage('gallery')}
                 >
-                  <FontAwesomeIcon name="image" size={20} color="#FE7F2D" />
+                  <FontAwesomeIcon name="image" size={16} color="#FE7F2D" />
                 </TouchableOpacity>
               </View>
             </View>
@@ -487,13 +582,12 @@ const ChatScreen = () => {
               style={styles.sendButton}
               onPress={handleSend}
             >
-              <Icon name="send" size={22} color="#fff" />
+              <Icon name="send" size={16} color="#fff" />
             </TouchableOpacity>
           </View>
         </View>
       </View>
 
-      {/* Bottom Navigation */}
       <View style={styles.navContainer}>
         <View style={styles.navigation}>
           <TouchableOpacity 
@@ -561,15 +655,15 @@ const styles = StyleSheet.create({
   chatArea: {
     flex: 1,
     marginTop: 10,
-    marginBottom: 140,
+    marginBottom: 100,
   },
   chatContent: {
     flex: 1,
     paddingHorizontal: 16,
   },
   chatContentContainer: {
-    paddingTop: 20,
-    paddingBottom: 20,
+    paddingTop: 16,
+    paddingBottom: 16,
   },
   aiMessageContainer: {
     alignItems: 'flex-start',
@@ -581,89 +675,98 @@ const styles = StyleSheet.create({
   },
   aiMessage: {
     backgroundColor: 'rgba(254, 127, 45, 0.1)',
-    padding: 15,
-    borderRadius: 20,
-    borderTopLeftRadius: 8,
+    padding: 12,
+    borderRadius: 16,
+    borderTopLeftRadius: 4,
     maxWidth: '80%',
   },
   userMessage: {
     backgroundColor: 'rgba(254, 127, 45, 0.3)',
-    padding: 15,
-    borderRadius: 20,
-    borderTopRightRadius: 8,
+    padding: 12,
+    borderRadius: 16,
+    borderTopRightRadius: 4,
     maxWidth: '80%',
   },
   messageText: {
     color: '#fff',
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 14,
+    lineHeight: 20,
     flexWrap: 'wrap',
     flexShrink: 1,
   },
   messageTime: {
     color: 'rgba(255, 255, 255, 0.6)',
-    fontSize: 12,
-    marginTop: 5,
+    fontSize: 11,
+    marginTop: 4,
     alignSelf: 'flex-end',
   },
   messageImage: {
-    width: 200,
-    height: 200,
-    borderRadius: 10,
-    marginBottom: 10,
+    width: 180,
+    height: 180,
+    borderRadius: 8,
+    marginBottom: 8,
   },
   inputWrapper: {
     position: 'absolute',
-    bottom: 70,
+    bottom: 60,
     left: 0,
     right: 0,
     backgroundColor: '#00272B',
     paddingTop: 8,
-    height: 80,
+    height: 'auto',
+    minHeight: 60,
+    justifyContent: 'center',
   },
   inputContainer: {
     paddingHorizontal: 16,
     paddingBottom: 8,
-    height: 64,
+    height: 'auto',
+    minHeight: 48,
   },
   inputSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 56,
+    minHeight: 40,
+    height: 'auto',
   },
   chatboxContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    height: 56,
+    minHeight: 40,
+    height: 'auto',
     backgroundColor: '#FBFCF8',
-    borderRadius: 28,
-    paddingHorizontal: 16,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   input: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 14,
     color: '#333',
-    height: 56,
-    maxHeight: 56,
+    minHeight: 16,
+    maxHeight: 100,
     paddingTop: 0,
     paddingBottom: 0,
+    textAlignVertical: 'center',
   },
   mediaButtons: {
     flexDirection: 'row',
-    marginLeft: 10,
+    marginLeft: 8,
+    alignSelf: 'center',
   },
   mediaButton: {
-    paddingHorizontal: 6,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
   },
   sendButton: {
-    width: 56,
-    height: 56,
+    width: 40,
+    height: 40,
     backgroundColor: '#FE7F2D',
-    borderRadius: 28,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 10,
+    marginLeft: 8,
   },
   navContainer: {
     position: 'absolute',
@@ -787,11 +890,11 @@ const styles = StyleSheet.create({
   },
   photoPreviewContainer: {
     position: 'absolute',
-    bottom: 150,
-    right: 20,
-    width: 100,
-    height: 100,
-    borderRadius: 10,
+    bottom: 120,
+    right: 16,
+    width: 80,
+    height: 80,
+    borderRadius: 8,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -799,16 +902,16 @@ const styles = StyleSheet.create({
   photoPreviewImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 10,
+    borderRadius: 8,
   },
   removePhotoButton: {
     position: 'absolute',
-    top: 5,
-    right: 5,
+    top: 4,
+    right: 4,
     backgroundColor: 'rgba(0,0,0,0.6)',
-    borderRadius: 15,
-    width: 30,
-    height: 30,
+    borderRadius: 12,
+    width: 24,
+    height: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -823,7 +926,21 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     flexDirection: 'row',
     flexWrap: 'wrap',
-  }
+  },
+  thinkingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 16,
+    paddingHorizontal: 8,
+  },
+  dot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: '#FE7F2D',
+    marginHorizontal: 2,
+  },
 });
 
 export default ChatScreen;
