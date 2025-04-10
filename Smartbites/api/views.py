@@ -180,34 +180,31 @@ from django.core.files.base import ContentFile
 def query_ollama(request):
     """API to send a request to Ollama and return a response."""
     try:
-        user_prompt = request.data.get("prompt", "Hello, Ollama!")  # Get user prompt
-        image_file = request.FILES.get("image", None)  # Get uploaded image
+        user_prompt = request.data.get("prompt", "Hello, Ollama!")
+        image_file = request.FILES.get("image", None)
 
         if image_file:
-            # Convert image to base64
             image_content = image_file.read()
             encoded_image = base64.b64encode(image_content).decode("utf-8")
         else:
             encoded_image = None
 
-        # Prepare request data
         ollama_payload = {
             "model": "biteai",
             "prompt": user_prompt,
         }
 
-        # Add image data if available
         if encoded_image:
             ollama_payload["images"] = [encoded_image]
 
-        # Send request to Ollama
         response = requests.post("http://127.0.0.1:11434/api/generate", json=ollama_payload)
         response_jsons = [json.loads(line) for line in response.text.split("\n") if line.strip()]
 
         final_response = "".join(entry["response"] for entry in response_jsons)
 
-        # Clean up response
-        cleaned_response = " ".join(final_response.split())
+        # Preserve newlines and formatting instead of splitting
+        cleaned_response = final_response.replace('\n\n', '\n')  # Normalize line breaks
+        cleaned_response = cleaned_response.strip()
 
         return Response({"response": cleaned_response}, status=response.status_code)
 

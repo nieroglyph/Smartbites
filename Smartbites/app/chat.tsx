@@ -68,6 +68,72 @@ const ChatScreen = () => {
     };
   }, []);
 
+  const FormattedText = ({ text }: { text: string }) => {
+    const elements: JSX.Element[] = [];
+    let keyIndex = 0;
+  
+    text.split('\n\n').forEach((paragraph, pIndex) => {
+      paragraph.split('\n').forEach((line, lIndex) => {
+        const lineElements: JSX.Element[] = [];
+        let remaining = line.trim();
+        let hasBullet = false;
+  
+        // Check for bullet point first and remove the asterisk
+        if (remaining.startsWith('* ')) {
+          hasBullet = true;
+          remaining = remaining.substring(2).trim(); // Remove the "* "
+        }
+  
+        // Then process bold text
+        while (remaining.includes('**')) {
+          const parts = remaining.split('**');
+          const before = parts[0];
+          const boldContent = parts[1] || '';
+          remaining = parts.slice(2).join('**');
+  
+          if (before) {
+            lineElements.push(
+              <Text key={`text-${keyIndex++}`} style={[styles.messageText, styles.defaultFont]}>
+                {before}
+              </Text>
+            );
+          }
+          
+          if (boldContent) {
+            lineElements.push(
+              <Text key={`bold-${keyIndex++}`} style={[styles.messageText, styles.defaultFont, { fontWeight: '700' }]}>
+                {boldContent}
+              </Text>
+            );
+          }
+        }
+  
+        if (remaining) {
+          lineElements.push(
+            <Text key={`remaining-${keyIndex++}`} style={[styles.messageText, styles.defaultFont]}>
+              {remaining}
+            </Text>
+          );
+        }
+  
+        elements.push(
+          <View key={`line-${pIndex}-${lIndex}`} style={styles.lineContainer}>
+            {hasBullet && <Text style={[styles.messageText, styles.defaultFont, { color: '#FE7F2D', marginRight: 8 }]}>•</Text>}
+            <Text style={styles.lineText}>
+              {lineElements}
+            </Text>
+          </View>
+        );
+      });
+  
+      if (pIndex < text.split('\n\n').length - 1) {
+        elements.push(<View key={`space-${pIndex}`} style={{ height: 12 }} />);
+      }
+    });
+  
+    return <View style={styles.textContainer}>{elements}</View>;
+  };
+  
   const handleSend = async () => {
     if (message.trim() || photoPreview) {
       // Add user's message (text and/or image) to chat
@@ -360,7 +426,7 @@ const ChatScreen = () => {
                 )}
                 {msg.text && (
                   <Text style={[styles.messageText, styles.defaultFont]}>
-                    {msg.text}
+                    <FormattedText text={msg.text} />
                   </Text>
                 )}
                 <Text style={[styles.messageTime, styles.defaultFont]}>{msg.time}</Text>
@@ -746,6 +812,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  textContainer: {
+    flexDirection: 'column',
+  },
+  lineContainer: {
+    flexDirection: 'row',
+    marginBottom: 4,
+  },
+  lineText: {
+    flexShrink: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  }
 });
 
 export default ChatScreen;
