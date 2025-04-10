@@ -68,26 +68,151 @@ const ChatScreen = () => {
     };
   }, []);
 
-  const handleSend = () => {
+  const FormattedText = ({ text }: { text: string }) => {
+    const elements: JSX.Element[] = [];
+    let keyIndex = 0;
+  
+    text.split('\n\n').forEach((paragraph, pIndex) => {
+      paragraph.split('\n').forEach((line, lIndex) => {
+        const lineElements: JSX.Element[] = [];
+        let remaining = line.trim();
+        let hasBullet = false;
+  
+        // Check for bullet point first and remove the asterisk
+        if (remaining.startsWith('* ')) {
+          hasBullet = true;
+          remaining = remaining.substring(2).trim(); // Remove the "* "
+        }
+  
+        // Then process bold text
+        while (remaining.includes('**')) {
+          const parts = remaining.split('**');
+          const before = parts[0];
+          const boldContent = parts[1] || '';
+          remaining = parts.slice(2).join('**');
+  
+          if (before) {
+            lineElements.push(
+              <Text key={`text-${keyIndex++}`} style={[styles.messageText, styles.defaultFont]}>
+                {before}
+              </Text>
+            );
+          }
+          
+          if (boldContent) {
+            lineElements.push(
+              <Text key={`bold-${keyIndex++}`} style={[styles.messageText, styles.defaultFont, { fontWeight: '700' }]}>
+                {boldContent}
+              </Text>
+            );
+          }
+        }
+  
+        if (remaining) {
+          lineElements.push(
+            <Text key={`remaining-${keyIndex++}`} style={[styles.messageText, styles.defaultFont]}>
+              {remaining}
+            </Text>
+          );
+        }
+  
+        elements.push(
+          <View key={`line-${pIndex}-${lIndex}`} style={styles.lineContainer}>
+            {hasBullet && <Text style={[styles.messageText, styles.defaultFont, { color: '#FE7F2D', marginRight: 8 }]}>•</Text>}
+            <Text style={styles.lineText}>
+              {lineElements}
+            </Text>
+          </View>
+        );
+      });
+  
+      if (pIndex < text.split('\n\n').length - 1) {
+        elements.push(<View key={`space-${pIndex}`} style={{ height: 12 }} />);
+      }
+    });
+  
+    return <View style={styles.textContainer}>{elements}</View>;
+  };
+  
+  const handleSend = async () => {
     if (message.trim() || photoPreview) {
+      // Add user's message (text and/or image) to chat
       const newUserMessage: Message = {
         id: messages.length + 1,
         text: message,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         isUser: true,
-        ...(photoPreview && { image: photoPreview })
+        ...(photoPreview && { image: photoPreview }) // Include image if available
       };
-      
-      setMessages([...messages, newUserMessage]);
+  
+      setMessages(prev => [...prev, newUserMessage]);
       setMessage('');
-      setPhotoPreview(null);
-      
-      setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+      setPhotoPreview(null); // Clear selected photo
+  
+      // Show a "thinking" message before AI starts responding
+      const thinkingMessage: Message = {
+        id: messages.length + 2,
+        text: 'Thinking...',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        isUser: false
+      };
+  
+      setMessages(prev => [...prev, thinkingMessage]);
+  
+      try {
+        const formData = new FormData();
+        formData.append('prompt', message);
+        if (photoPreview) {
+          formData.append('image', {
+            uri: photoPreview,
+            type: 'image/jpeg', // Adjust if needed
+            name: 'photo.jpg'
+          });
+        }
+  
+        // Send message and/or image to Django backend
+        const response = await fetch('http://192.168.100.10:8000/api/query-ollama/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'multipart/form-data' }, // Use multipart for images
+          body: formData
+        });
+  
+        if (!response.ok) throw new Error('Failed to get response from AI');
+  
+        const data = await response.json();
+        const fullResponse = data.response;
+  
+        let currentText = '';
+        let index = 0;
+  
+        // Replace "thinking" message with an empty message for animation
+        setMessages(prev =>
+          prev.map(msg => (msg.id === thinkingMessage.id ? { ...msg, text: '' } : msg))
+        );
+  
+        // Typing effect: Add text letter by letter
+        const interval = setInterval(() => {
+          if (index < fullResponse.length) {
+            currentText += fullResponse[index];
+            index++;
+  
+            setMessages(prevMessages =>
+              prevMessages.map(msg =>
+                msg.id === thinkingMessage.id ? { ...msg, text: currentText } : msg
+              )
+            );
+          } else {
+            clearInterval(interval);
+          }
+        }, 30);
+  
+      } catch (error) {
+        console.error('Error fetching AI response:', error);
+        Alert.alert('Error', 'Failed to communicate with AI.');
+      }
     }
   };
-
+  
   const pickImage = async (source: 'gallery' | 'camera') => {
     if (source === 'gallery') {
       try {
@@ -301,7 +426,7 @@ const ChatScreen = () => {
                 )}
                 {msg.text && (
                   <Text style={[styles.messageText, styles.defaultFont]}>
-                    {msg.text}
+                    <FormattedText text={msg.text} />
                   </Text>
                 )}
                 <Text style={[styles.messageTime, styles.defaultFont]}>{msg.time}</Text>
@@ -687,6 +812,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  textContainer: {
+    flexDirection: 'column',
+  },
+  lineContainer: {
+    flexDirection: 'row',
+    marginBottom: 4,
+  },
+  lineText: {
+    flexShrink: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  }
 });
 
 export default ChatScreen;

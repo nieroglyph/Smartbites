@@ -167,3 +167,46 @@ def recipe_search(request):
 
     recipes = get_recipes(ingredients)
     return Response(recipes)
+
+# ollama - biteai
+import requests
+import json
+import base64
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from django.core.files.base import ContentFile
+
+@api_view(['POST'])
+def query_ollama(request):
+    """API to send a request to Ollama and return a response."""
+    try:
+        user_prompt = request.data.get("prompt", "Hello, Ollama!")
+        image_file = request.FILES.get("image", None)
+
+        if image_file:
+            image_content = image_file.read()
+            encoded_image = base64.b64encode(image_content).decode("utf-8")
+        else:
+            encoded_image = None
+
+        ollama_payload = {
+            "model": "biteai",
+            "prompt": user_prompt,
+        }
+
+        if encoded_image:
+            ollama_payload["images"] = [encoded_image]
+
+        response = requests.post("http://127.0.0.1:11434/api/generate", json=ollama_payload)
+        response_jsons = [json.loads(line) for line in response.text.split("\n") if line.strip()]
+
+        final_response = "".join(entry["response"] for entry in response_jsons)
+
+        # Preserve newlines and formatting instead of splitting
+        cleaned_response = final_response.replace('\n\n', '\n')  # Normalize line breaks
+        cleaned_response = cleaned_response.strip()
+
+        return Response({"response": cleaned_response}, status=response.status_code)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
