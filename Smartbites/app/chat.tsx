@@ -130,12 +130,13 @@ const ChatScreen = () => {
   const [showCamera, setShowCamera] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [cameraType, setCameraType] = useState<CameraType>('back');
-  const [permission, requestPermission] = useCameraPermissions();
   const [flashMode, setFlashMode] = useState(false);
   const [zoom, setZoom] = useState(0);
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
   const [inputHeight, setInputHeight] = useState(16);
+  const [isAIResponding, setIsAIResponding] = useState(false);
   
+  const [cameraPermission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -149,13 +150,15 @@ const ChatScreen = () => {
       if (status !== 'granted') {
         Alert.alert('Permission required', 'We need access to your media library to attach images');
       }
-    })();
 
-    return () => {
-      if (showCamera) {
-        setShowCamera(false);
+      // Request camera permission when component mounts
+      if (!cameraPermission) {
+        const { granted } = await requestPermission();
+        if (!granted) {
+          console.log('Camera permission not granted');
+        }
       }
-    };
+    })();
   }, []);
 
   const FormattedText = ({ text }: { text: string }) => {
@@ -223,7 +226,7 @@ const ChatScreen = () => {
   };
   
   const handleSend = async () => {
-    if (message.trim() || photoPreview) {
+    if ((message.trim() || photoPreview) && !isAIResponding) {
       const newUserMessage: Message = {
         id: messages.length + 1,
         text: message,
@@ -245,7 +248,8 @@ const ChatScreen = () => {
       };
   
       setMessages(prev => [...prev, thinkingMessage]);
-  
+      setIsAIResponding(true);
+
       try {
         const formData = new FormData();
         formData.append('prompt', message);
@@ -291,17 +295,21 @@ const ChatScreen = () => {
             );
           } else {
             clearInterval(interval);
+            setIsAIResponding(false);
           }
         }, 30);
   
       } catch (error) {
         console.error('Error fetching AI response:', error);
         Alert.alert('Error', 'Failed to communicate with AI.');
+        setIsAIResponding(false);
       }
     }
   };
   
   const pickImage = async (source: 'gallery' | 'camera') => {
+    if (isAIResponding) return;
+    
     if (source === 'gallery') {
       try {
         const result = await ImagePicker.launchImageLibraryAsync({
@@ -324,11 +332,19 @@ const ChatScreen = () => {
       }
 
       try {
-        const { granted } = await requestPermission();
-        if (!granted) {
-          Alert.alert('Permission required', 'Camera access is needed to take photos');
+        if (!cameraPermission) {
+          console.log('Camera permission not initialized');
           return;
         }
+
+        if (!cameraPermission.granted) {
+          const { granted } = await requestPermission();
+          if (!granted) {
+            Alert.alert('Permission required', 'Camera access is needed to take photos');
+            return;
+          }
+        }
+
         setCameraType('back');
         setZoom(0);
         setFlashMode(false);
@@ -389,16 +405,21 @@ const ChatScreen = () => {
   }
 
   if (showCamera) {
-    if (!permission) {
+    if (!cameraPermission) {
       return <View />;
     }
 
-    if (!permission.granted) {
+    if (!cameraPermission.granted) {
       return (
         <View style={styles.cameraPermissionContainer}>
           <Text style={styles.permissionText}>We need your permission to show the camera</Text>
           <TouchableOpacity 
-            onPress={requestPermission} 
+            onPress={async () => {
+              const { granted } = await requestPermission();
+              if (granted) {
+                setShowCamera(true);
+              }
+            }} 
             style={styles.permissionButton}
           >
             <Text style={styles.permissionButtonText}>Grant Permission</Text>
@@ -511,7 +532,9 @@ const ChatScreen = () => {
                   />
                 )}
                 {msg.text === '###THINKING_ANIMATION###' ? (
-                  <ThinkingDots />
+                  <View style={styles.thinkingMessageContainer}>
+                    <ThinkingDots />
+                  </View>
                 ) : msg.text ? (
                   <Text style={[styles.messageText, styles.defaultFont]}>
                     <FormattedText text={msg.text} />
@@ -548,9 +571,10 @@ const ChatScreen = () => {
                 style={[
                   styles.input, 
                   styles.defaultFont, 
-                  { height: Math.max(16, inputHeight) }
+                  { height: Math.max(16, inputHeight) },
+                  isAIResponding && styles.disabledInput
                 ]}
-                placeholder="Type your message..."
+                placeholder={isAIResponding ? "AI is responding..." : "Type your message..."}
                 placeholderTextColor="#999"
                 multiline
                 value={message}
@@ -561,28 +585,32 @@ const ChatScreen = () => {
                   setInputHeight(newHeight);
                 }}
                 onSubmitEditing={handleSend}
+                editable={!isAIResponding}
               />
               <View style={styles.mediaButtons}>
                 <TouchableOpacity 
-                  style={styles.mediaButton}
+                  style={[styles.mediaButton, isAIResponding && styles.disabledButton]}
                   onPress={() => pickImage('camera')}
+                  disabled={isAIResponding}
                 >
-                  <FontAwesomeIcon name="camera" size={16} color="#FE7F2D" />
+                  <FontAwesomeIcon name="camera" size={16} color={isAIResponding ? "#ccc" : "#FE7F2D"} />
                 </TouchableOpacity>
                 <TouchableOpacity 
-                  style={styles.mediaButton}
+                  style={[styles.mediaButton, isAIResponding && styles.disabledButton]}
                   onPress={() => pickImage('gallery')}
+                  disabled={isAIResponding}
                 >
-                  <FontAwesomeIcon name="image" size={16} color="#FE7F2D" />
+                  <FontAwesomeIcon name="image" size={16} color={isAIResponding ? "#ccc" : "#FE7F2D"} />
                 </TouchableOpacity>
               </View>
             </View>
 
             <TouchableOpacity 
-              style={styles.sendButton}
+              style={[styles.sendButton, isAIResponding && styles.disabledButton]}
               onPress={handleSend}
+              disabled={isAIResponding}
             >
-              <Icon name="send" size={16} color="#fff" />
+              <Icon name="send" size={16} color={isAIResponding ? "#ccc" : "#fff"} />
             </TouchableOpacity>
           </View>
         </View>
@@ -706,6 +734,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 8,
   },
+  thinkingMessageContainer: {
+    height: 13,
+    justifyContent: 'center',
+  },
   inputWrapper: {
     position: 'absolute',
     bottom: 60,
@@ -750,6 +782,9 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
     textAlignVertical: 'center',
   },
+  disabledInput: {
+    backgroundColor: 'transparent',
+  },
   mediaButtons: {
     flexDirection: 'row',
     marginLeft: 8,
@@ -767,6 +802,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 8,
+  },
+  disabledButton: {
+    opacity: 0.5,
   },
   navContainer: {
     position: 'absolute',
@@ -863,9 +901,6 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     backgroundColor: 'white',
   },
-  disabledButton: {
-    opacity: 0.6,
-  },
   cameraPermissionContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -931,7 +966,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 16,
+    height: 13,
     paddingHorizontal: 8,
   },
   dot: {
