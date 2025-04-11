@@ -21,6 +21,7 @@ export default function RootLayout() {
         <Stack.Screen name="chat" options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name="profile" options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name="userprofile" options={{ headerShown: false, gestureEnabled: false }} />
+        <Stack.Screen name="faq" options={{ headerShown: false, gestureEnabled: false }} />
       </Stack>
     </GestureHandlerRootView>
   );

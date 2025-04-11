@@ -609,6 +609,8 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
   );
 };
 
+// ... (import statements remain the same)
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -637,11 +639,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   rightHeaderSpace: {
-    width: 24, // Same as icon size for balance
+    width: 24,
   },
   scrollContainer: {
-    padding: 20,
-    paddingBottom: 100, // Add extra padding for the fixed button
+    padding: 12,
+    paddingBottom: 80,
   },
   profilePictureContainer: {
     alignItems: 'center',
@@ -656,7 +658,7 @@ const styles = StyleSheet.create({
   profilePictureButtons: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 10,
+    gap: 8,
   },
   pictureButton: {
     backgroundColor: '#FE7F2D',
@@ -666,23 +668,27 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontWeight: 'bold',
+    fontSize: 13,
   },
   inputContainer: {
-    marginBottom: 15,
+    marginBottom: 12,
+    paddingHorizontal: 3,
   },
   label: {
-    marginBottom: 5,
-    fontWeight: 'bold',
+    marginBottom: 4,
+    fontWeight: '600',
     color: '#FBFCF8',
+    fontSize: 13,
   },
   input: {
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 5,
     padding: 10,
-    fontSize: 16,
+    fontSize: 13,
     backgroundColor: '#FBFCF8',
     color: '#00272B',
+    height: 40,
   },
   errorInput: {
     borderColor: 'red',
@@ -690,33 +696,32 @@ const styles = StyleSheet.create({
   errorText: {
     color: 'red',
     fontSize: 12,
-    marginTop: 5,
+    marginTop: 4,
   },
-  // Fixed button container stays at the bottom
   fixedButtonContainer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
     backgroundColor: '#00272B',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    padding: 16,
+    paddingBottom: 24,
     borderTopWidth: 1,
     borderTopColor: '#FE7F2D',
   },
   submitButton: {
     backgroundColor: '#FE7F2D',
-    padding: 15,
-    borderRadius: 5,
+    padding: 12,
+    borderRadius: 6,
     alignItems: 'center',
   },
   submitButtonText: {
     color: '#FBFCF8',
-    fontWeight: 'bold',
-    fontSize: 16,
+    fontWeight: '500',
+    fontSize: 13,
   },
   bottomSpacer: {
-    height: 60, // Create space at the bottom so content isn't hidden behind the fixed button
+    height: 60,
   },
   cameraContainer: {
     flex: 1,
@@ -785,13 +790,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   changePasswordButton: {
-    marginTop: 10,
+    marginTop: 8,
     padding: 10,
     alignItems: 'flex-start',
   },
   changePasswordButtonText: {
     color: '#FE7F2D',
-    fontWeight: 'bold',
+    fontWeight: '500',
+    fontSize: 13,
   },
   blurView: {
     flex: 1,
@@ -805,37 +811,37 @@ const styles = StyleSheet.create({
   modalView: {
     backgroundColor: '#00272B',
     borderRadius: 10,
-    padding: 20,
+    padding: 16,
     width: '100%',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 1,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
     borderWidth: 1,
     borderColor: '#FE7F2D',
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: 16,
     textAlign: 'center',
     color: '#FBFCF8',
   },
   modalButtonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 10,
+    marginTop: 8,
   },
   modalButton: {
-    borderRadius: 5,
-    padding: 10,
+    borderRadius: 6,
+    padding: 12,
     elevation: 2,
     flex: 1,
-    marginHorizontal: 5,
+    marginHorizontal: 4,
     alignItems: 'center',
   },
   modalButtonClose: {
@@ -846,14 +852,15 @@ const styles = StyleSheet.create({
   },
   modalButtonText: {
     color: 'white',
-    fontWeight: 'bold',
+    fontWeight: '500',
     textAlign: 'center',
+    fontSize: 13,
   },
   notificationContainer: {
     backgroundColor: '#f0f9f1',
     borderRadius: 8,
     padding: 12,
-    marginVertical: 10,
+    marginVertical: 8,
     borderLeftWidth: 4,
     borderLeftColor: '#34C759',
   },
@@ -865,6 +872,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     color: '#2a7f3a',
     fontWeight: '500',
+    fontSize: 13,
   },
 });
 

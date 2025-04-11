@@ -1,10 +1,36 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Image } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  ScrollView, 
+  ActivityIndicator, 
+  Image, 
+  Modal, 
+  TextInput,
+  Animated,
+  Pressable,
+  TouchableWithoutFeedback,
+  Easing,
+  Alert
+} from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
-import LogoutSplashScreen from './logout_splashscreen';
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { BlurView } from 'expo-blur';
+import * as MailComposer from 'expo-mail-composer';
+
+type FeedbackCategory = 
+  | 'Suggestions / Feature Requests'
+  | 'Bug Report'
+  | 'Support / Help Needed'
+  | 'General Feedback'
+  | 'Compliment / Positive Feedback'
+  | 'Complaint / Negative Experience'
+  | 'Account or Billing Issues'
+  | 'Other';
 
 type IoniconsName = 
   | 'person-outline' 
@@ -13,7 +39,9 @@ type IoniconsName =
   | 'log-out-outline'
   | 'create-outline'
   | 'chevron-forward'
-  | 'settings-outline';
+  | 'settings-outline'
+  | 'star-outline'
+  | 'chatbox-outline';
 
 interface SettingItemProps {
   icon: IoniconsName;
@@ -23,10 +51,91 @@ interface SettingItemProps {
 
 const ProfileScreen = () => {
   const router = useRouter();
-  
   const [fontsLoaded] = useFonts({
     'IstokWeb-Regular': require('../assets/fonts/IstokWeb-Regular.ttf'),
   });
+
+  // Feedback modal state
+  const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
+  const [feedbackCategory, setFeedbackCategory] = useState<FeedbackCategory>('General Feedback');
+  const [otherCategoryText, setOtherCategoryText] = useState('');
+  const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
+
+  // Animation refs
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+
+  const feedbackCategories: FeedbackCategory[] = [
+    'General Feedback',
+    'Suggestions / Feature Requests',
+    'Bug Report',
+    'Support / Help Needed',
+    'Compliment / Positive Feedback',
+    'Complaint / Negative Experience',
+    'Account or Billing Issues',
+    'Other',
+  ];
+
+  useEffect(() => {
+    if (feedbackModalVisible) {
+      Animated.parallel([
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 200,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(scaleAnim, {
+          toValue: 0.8,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 0,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [feedbackModalVisible]);
+
+  useEffect(() => {
+    // Fetch user email from your database/API
+    const fetchUserEmail = async () => {
+      try {
+        const token = await AsyncStorage.getItem("authToken");
+        if (!token) return;
+
+        // Replace with your actual API endpoint to get user data
+        const response = await fetch("http://192.168.254.111:8000/api/user/", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Token ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const userData = await response.json();
+          setUserEmail(userData.email); // Assuming your API returns email in the response
+        }
+      } catch (error) {
+        console.error("Error fetching user email:", error);
+      }
+    };
+
+    fetchUserEmail();
+  }, []);
 
   if (!fontsLoaded) {
     return (
@@ -37,7 +146,7 @@ const ProfileScreen = () => {
   }
 
   const profile = {
-    profilePicture: null, // Set to null to use default image
+    profilePicture: null,
     name: "Mark Denzel Permison",
     accountNumber: "0123456789"
   };
@@ -50,13 +159,72 @@ const ProfileScreen = () => {
     },
     { icon: "card-outline", label: "My cards" },
     { icon: "settings-outline", label: "Application settings" },
-    { icon: "information-circle-outline", label: "FAQ/Support" },
   ];
 
-  const handleSettingPress = (label: string, onPress?: () => void) => {
-    console.log(`Navigating to ${label}`);
-    if (onPress) {
-      onPress();
+  const supportData: SettingItemProps[] = [
+    { 
+      icon: "chatbox-outline", 
+      label: "Feedback",
+      onPress: () => setFeedbackModalVisible(true) 
+    },
+    { 
+      icon: "star-outline", 
+      label: "Rate Us",
+      onPress: () => console.log("Rate Us pressed") 
+    },
+    { 
+      icon: "information-circle-outline", 
+      label: "FAQ/Support",
+      onPress: () => router.push('/faq')
+    },
+  ];
+
+  const handleSubmitFeedback = async () => {
+    if (!feedbackMessage || (feedbackCategory === 'Other' && !otherCategoryText)) {
+      Alert.alert('Error', 'Please fill in all required fields');
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      const category = feedbackCategory === 'Other' ? otherCategoryText : feedbackCategory;
+      
+      // Check if MailComposer is available
+      const isAvailable = await MailComposer.isAvailableAsync();
+      if (!isAvailable) {
+        Alert.alert('Error', 'Email services are not available on this device');
+        return;
+      }
+
+      // Compose the email
+      const result = await MailComposer.composeAsync({
+        recipients: ['Smartbites@gmail.com'], // Replace with your support email
+        subject: `Feedback: ${category}`,
+        body: `
+          Feedback Category: ${category}
+          Message: ${feedbackMessage}
+          
+          User Details:
+          Name: ${profile.name}
+          Account Number: ${profile.accountNumber}
+          Email: ${userEmail}
+        `,
+        isHtml: false
+      });
+
+      if (result.status === MailComposer.MailComposerStatus.SENT) {
+        Alert.alert('Success', 'Thank you for your feedback!');
+        setFeedbackCategory('General Feedback');
+        setOtherCategoryText('');
+        setFeedbackMessage('');
+        setFeedbackModalVisible(false);
+      }
+    } catch (error) {
+      console.error("Error sending feedback:", error);
+      Alert.alert('Error', 'Failed to send feedback. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -82,7 +250,7 @@ const ProfileScreen = () => {
 
   return (
     <View style={styles.mainContainer}>
-      {/* Header with return button and logo */}
+      {/* Header */}
       <View style={styles.headerContainer}>
         <TouchableOpacity 
           style={styles.returnButton}
@@ -91,13 +259,13 @@ const ProfileScreen = () => {
         >
           <MaterialCommunityIcons name="keyboard-return" size={24} color="#FE7F2D" />
         </TouchableOpacity>
-        
+        <View style={styles.rightHeaderSpace} />
       </View>
 
-      {/* Content Container */}
+      {/* Content */}
       <View style={styles.contentContainer}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          {/* Profile Container */}
+          {/* Profile Section */}
           <View style={styles.profileContainer}>
             <View style={styles.profileHeader}>
               <View style={styles.profilePictureContainer}>
@@ -114,37 +282,158 @@ const ProfileScreen = () => {
                 activeOpacity={0.7}
                 onPress={() => router.push('/profile_edit')}
               >
-                <Ionicons name="create-outline" size={24} color="#FE7F2D" />
+                <Ionicons name="create-outline" size={20} color="#FE7F2D" />
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* Settings Container */}
+          {/* Settings Section */}
           <View style={styles.settingsContainer}>
             {settingsData.map((item, index) => (
               <TouchableOpacity
                 key={index}
                 style={styles.settingItem}
-                onPress={() => handleSettingPress(item.label, item.onPress)}
+                onPress={item.onPress}
                 activeOpacity={0.7}
               >
-                <Ionicons name={item.icon} size={22} color="#FE7F2D" />
+                <Ionicons name={item.icon} size={18} color="#FE7F2D" />
                 <Text style={styles.settingText}>{item.label}</Text>
-                <Ionicons name="chevron-forward" size={18} color="#FE7F2D" />
+                <Ionicons name="chevron-forward" size={16} color="#FE7F2D" />
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Support Section */}
+          <View style={styles.supportContainer}>
+            <Text style={styles.sectionHeader}>Support</Text>
+            {supportData.map((item, index) => (
+              <TouchableOpacity
+                key={`support-${index}`}
+                style={styles.settingItem}
+                onPress={item.onPress}
+                activeOpacity={0.7}
+              >
+                <Ionicons name={item.icon} size={18} color="#FE7F2D" />
+                <Text style={styles.settingText}>{item.label}</Text>
+                <Ionicons name="chevron-forward" size={16} color="#FE7F2D" />
               </TouchableOpacity>
             ))}
           </View>
         </ScrollView>
       </View>
 
-      {/* Footer Container */}
+      {/* Feedback Modal */}
+      <Modal
+        visible={feedbackModalVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setFeedbackModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setFeedbackModalVisible(false)}>
+          <BlurView
+            style={styles.blurView}
+            intensity={20}
+            tint="dark"
+          >
+            <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+              <Animated.View 
+                style={[
+                  styles.animatedModalView,
+                  {
+                    transform: [{ scale: scaleAnim }],
+                    opacity: opacityAnim,
+                  }
+                ]}
+              >
+                <View style={styles.modalContent}>
+                  <Text style={styles.modalTitle}>We Value Your Feedback</Text>
+                  
+                  <Text style={styles.inputLabel}>Category</Text>
+                  <ScrollView style={styles.categoryScrollView}>
+                    {feedbackCategories.map((category, index) => (
+                      <TouchableOpacity
+                        key={index}
+                        style={[
+                          styles.categoryItem,
+                          feedbackCategory === category && styles.selectedCategory
+                        ]}
+                        onPress={() => setFeedbackCategory(category)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[
+                          styles.categoryText,
+                          feedbackCategory === category && styles.selectedCategoryText
+                        ]}>
+                          {category}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+
+                  {(feedbackCategory === 'Other') && (
+                    <>
+                      <Text style={styles.inputLabel}>Please specify</Text>
+                      <TextInput
+                        style={styles.textInput}
+                        placeholder="Enter your category..."
+                        placeholderTextColor="#7F8C8D"
+                        value={otherCategoryText}
+                        onChangeText={setOtherCategoryText}
+                        multiline={false}
+                      />
+                    </>
+                  )}
+
+                  <Text style={styles.inputLabel}>Message</Text>
+                  <TextInput
+                    style={[styles.textInput, styles.messageInput]}
+                    placeholder="Enter your feedback message..."
+                    placeholderTextColor="#7F8C8D"
+                    value={feedbackMessage}
+                    onChangeText={setFeedbackMessage}
+                    multiline={true}
+                    numberOfLines={4}
+                  />
+
+                  <View style={styles.modalButtonContainer}>
+                    <Pressable
+                      style={[styles.modalButton, styles.modalButtonClose]}
+                      onPress={() => setFeedbackModalVisible(false)}
+                      disabled={isSubmitting}
+                    >
+                      <Text style={styles.modalButtonText}>Cancel</Text>
+                    </Pressable>
+                    <Pressable
+                      style={[
+                        styles.modalButton, 
+                        styles.modalButtonSubmit,
+                        (!feedbackMessage || (feedbackCategory === 'Other' && !otherCategoryText)) && styles.disabledButton
+                      ]}
+                      onPress={handleSubmitFeedback}
+                      disabled={isSubmitting || !feedbackMessage || (feedbackCategory === 'Other' && !otherCategoryText)}
+                    >
+                      {isSubmitting ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Text style={styles.modalButtonText}>Submit</Text>
+                      )}
+                    </Pressable>
+                  </View>
+                </View>
+              </Animated.View>
+            </TouchableWithoutFeedback>
+          </BlurView>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* Footer */}
       <View style={styles.footerContainer}>
         <TouchableOpacity 
           style={styles.logoutButton}
           onPress={handleLogout}
           activeOpacity={0.7}
         >
-          <Ionicons name="log-out-outline" size={22} color="#E74C3C" />
+          <Ionicons name="log-out-outline" size={18} color="#E74C3C" />
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
       </View>
@@ -163,58 +452,52 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingHorizontal: 15,
     paddingBottom: 10,
+    backgroundColor: '#00272B',
   },
   returnButton: {
+    marginBottom: 5,
     marginRight: 15,
   },
-  logo: {
-    width: 120,
-    height: 40,
+  rightHeaderSpace: {
+    width: 24,
   },
   contentContainer: {
     flex: 1,
-  },
-  footerContainer: {
-    padding: 20,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    paddingHorizontal: 12,
   },
   scrollContent: {
-    paddingBottom: 20,
+    paddingBottom: 16,
   },
   profileContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
+    paddingHorizontal: 3,
+    paddingTop: 8,
   },
   profileHeader: {
-    marginBottom: 10,
+    marginBottom: 8,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FBFCF8",
-    padding: 20,
-    borderRadius: 12,
+    padding: 16,
+    borderRadius: 10,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 3,
+    elevation: 2,
   },
   profilePictureContainer: {
-    marginRight: 15,
+    marginRight: 12,
   },
   profilePicture: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
   },
   profileInfo: {
     flex: 1,
   },
   userName: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: "600",
     color: "#2C3E50",
     marginBottom: 4,
@@ -226,40 +509,168 @@ const styles = StyleSheet.create({
     fontFamily: 'IstokWeb-Regular',
   },
   settingsContainer: {
-    marginTop: 20,
-    paddingHorizontal: 20,
+    marginTop: 16,
+    paddingHorizontal: 3,
   },
   settingItem: {
     borderRadius: 5,
-    marginBottom: 5,
+    marginBottom: 4,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FBFCF8",
-    padding: 18,
+    padding: 14,
     borderBottomWidth: 1,
     borderBottomColor: "#ECF0F1",
+    height: 50,
   },
   settingText: {
     flex: 1,
-    fontSize: 15,
-    marginLeft: 15,
+    fontSize: 13,
+    marginLeft: 12,
     color: "#34495E",
     fontFamily: 'IstokWeb-Regular',
+  },
+  supportContainer: {
+    marginTop: 24,
+    paddingHorizontal: 3,
+  },
+  sectionHeader: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FBFCF8',
+    marginBottom: 8,
+    paddingLeft: 8,
+    fontFamily: 'IstokWeb-Regular',
+  },
+  footerContainer: {
+    padding: 16,
+    paddingBottom: 24,
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 6,
     backgroundColor: '#FDEDED',
   },
   logoutText: {
     color: "#E74C3C",
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '500',
-    marginLeft: 10,
+    marginLeft: 8,
     fontFamily: 'IstokWeb-Regular',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // Modal styles
+  blurView: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  animatedModalView: {
+    width: '90%',
+    maxWidth: 400,
+  },
+  modalContent: {
+    width: "100%",
+    backgroundColor: "#00272B",
+    padding: 16,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#FE7F2D',
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 16,
+    color: "#FE7F2D",
+    textAlign: 'center',
+    fontFamily: 'IstokWeb-Regular',
+  },
+  inputLabel: {
+    fontSize: 13,
+    marginBottom: 8,
+    color: "#FE7F2D",
+    fontFamily: 'IstokWeb-Regular',
+  },
+  categoryScrollView: {
+    maxHeight: 150,
+    marginBottom: 16,
+  },
+  categoryItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#7F8C8D",
+  },
+  selectedCategory: {
+    backgroundColor: "#FE7F2D",
+    borderRadius: 4,
+  },
+  categoryText: {
+    fontSize: 13,
+    color: "#FBFCF8",
+    fontFamily: 'IstokWeb-Regular',
+  },
+  selectedCategoryText: {
+    color: "#00272B",
+    fontWeight: 'bold',
+  },
+  textInput: {
+    backgroundColor: 'rgba(251, 252, 248, 0.1)',
+    borderBottomWidth: 1,
+    borderBottomColor: "#7F8C8D",
+    borderRadius: 4,
+    padding: 10,
+    marginBottom: 16,
+    fontSize: 13,
+    color: "#FBFCF8",
+    fontFamily: 'IstokWeb-Regular',
+  },
+  messageInput: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  modalButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  modalButton: {
+    borderRadius: 6,
+    padding: 12,
+    elevation: 2,
+    minWidth: 100,
+    alignItems: 'center',
+    flex: 1,
+  },
+  modalButtonClose: {
+    backgroundColor: 'red',
+    borderWidth: 1,
+    marginRight: 8,
+  },
+  modalButtonSubmit: {
+    backgroundColor: '#FE7F2D',
+    marginLeft: 8,
+  },
+  modalButtonText: {
+    color: '#FBFCF8',
+    fontWeight: '500',
+    fontSize: 13,
+    fontFamily: 'IstokWeb-Regular',
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
 });
 
