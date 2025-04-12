@@ -19,6 +19,7 @@ import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BlurView } from 'expo-blur';
+import useUserProfile from './hooks/useUserProfile';
 
 type IoniconsName = 
   | 'person-outline' 
@@ -39,6 +40,7 @@ type MaterialCommunityIcons =
   | 'keyboard-return';
 
 const UserprofileScreen = () => {
+  const { profile, loading, error } = useUserProfile();
   const router = useRouter();
   
   const [fontsLoaded] = useFonts({
@@ -123,6 +125,14 @@ const UserprofileScreen = () => {
     );
   }
 
+  if (error) {
+    return (
+      <View>
+        <Text>Error loading profile: {error}</Text>
+      </View>
+    );
+  }
+
   const commonAllergies = [
     'Peanuts', 'Shellfish', 'Eggs', 'Milk', 'Wheat', 'Soy', 'Tree Nuts', 'Fish', 'Gluten', 'Sesame'
   ];
@@ -169,8 +179,8 @@ const UserprofileScreen = () => {
               <View style={styles.profileHeader}>
                 <View style={styles.avatar} />
                 <View style={styles.profileInfo}>
-                  <Text style={styles.userName}>Mark Denzel Permison</Text>
-                  <Text style={styles.accountNumber}>Account number: 0123456789</Text>
+                <Text style={styles.userName}>{profile.name}</Text>
+                <Text style={styles.userEmail}>{profile.email}</Text>
                 </View>
               </View>
             </View>
@@ -452,7 +462,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     fontFamily: 'IstokWeb-Regular',
   },
-  accountNumber: {
+  userEmail: {
     fontSize: 13,
     color: "#7F8C8D",
     fontFamily: 'IstokWeb-Regular',

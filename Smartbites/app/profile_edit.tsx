@@ -14,7 +14,8 @@ import {
   Pressable,
   Animated,
   Easing,
-  TouchableWithoutFeedback
+  TouchableWithoutFeedback,
+  ActivityIndicator
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import * as ImagePicker from 'expo-image-picker';
@@ -23,6 +24,7 @@ import { AntDesign, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-i
 import PhotoPreviewSection from './photo_preview_section';
 import { router } from 'expo-router';
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import useUserProfile from './hooks/useUserProfile';
 
 interface Profile {
   name: string;
@@ -47,6 +49,9 @@ interface ProfileEditProps {
 }
 
 const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
+
+const { profile: fetchedProfile, loading, error } = useUserProfile();
+
 // Replace the initial state and add useEffect for data fetching
 const [profile, setProfile] = useState<Profile>({
   name: '',
@@ -56,36 +61,6 @@ const [profile, setProfile] = useState<Profile>({
   confirmPassword: '',
   profilePicture: null,
 });
-
-useEffect(() => {
-  const fetchUserData = async () => {
-    try {
-      const token = await AsyncStorage.getItem("authToken");
-      if (!token) return;
-
-      const response = await fetch("http://192.168.100.10:8000/api/current-user/", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Token ${token}`,
-        }
-      });
-
-      if (response.ok) {
-        const userData = await response.json();
-        setProfile(prev => ({
-          ...prev,
-          name: userData.full_name,
-          email: userData.email
-        }));
-      }
-    } catch (error) {
-      console.error("Error fetching user data:", error);
-    }
-  };
-
-  fetchUserData();
-}, []);
   
   // Store temporary password values for the modal
   const [tempPasswords, setTempPasswords] = useState({
@@ -106,6 +81,17 @@ useEffect(() => {
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const notificationOpacity = useRef(new Animated.Value(0)).current;
+
+    // Sync fetched data with local state
+    useEffect(() => {
+      if (fetchedProfile) {
+        setProfile(prev => ({
+          ...prev,
+          name: fetchedProfile.name,
+          email: fetchedProfile.email
+        }));
+      }
+    }, [fetchedProfile]);
 
   useEffect(() => {
     if (permission && !permission.granted) {
@@ -172,6 +158,23 @@ useEffect(() => {
       });
     }
   }, [showPasswordNotification]);
+
+    // Handle loading and error states
+    if (loading) {
+      return (
+        <View>
+          <ActivityIndicator size="large" color="#3498DB" />
+        </View>
+      );
+    }
+  
+    if (error) {
+      return (
+        <View>
+          <Text>Error loading profile: {error}</Text>
+        </View>
+      );
+    }
 
   const handleChange = (field: keyof Profile, value: string) => {
     setProfile(prev => ({ ...prev, [field]: value }));
@@ -252,17 +255,6 @@ useEffect(() => {
     } catch (error) {
       console.error("Update error:", error);
       Alert.alert('Error', 'Failed to update profile');
-    }
-  };
-
-  const handleReturnToProfile = () => {
-    // Navigate back to profile.tsx
-    if (navigation) {
-      navigation.goBack();
-    } else {
-      // Fallback for when navigation prop is not available
-      console.log('Return to profile requested, but navigation prop is not available');
-      Alert.alert('Navigation', 'Returning to profile...');
     }
   };
 

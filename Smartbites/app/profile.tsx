@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -21,6 +21,8 @@ import { useFonts } from 'expo-font';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BlurView } from 'expo-blur';
 import * as MailComposer from 'expo-mail-composer';
+import { useFocusEffect } from '@react-navigation/native';
+import useUserProfile from './hooks/useUserProfile';
 
 type FeedbackCategory = 
   | 'Suggestions / Feature Requests'
@@ -50,6 +52,7 @@ interface SettingItemProps {
 }
 
 const ProfileScreen = () => {
+  const { profile, loading, error, refresh } = useUserProfile();
   const router = useRouter();
   const [fontsLoaded] = useFonts({
     'IstokWeb-Regular': require('../assets/fonts/IstokWeb-Regular.ttf'),
@@ -76,6 +79,13 @@ const ProfileScreen = () => {
     'Account or Billing Issues',
     'Other',
   ];
+
+    // Add automatic refresh when screen gains focus
+    useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh])
+  );
 
   useEffect(() => {
     if (feedbackModalVisible) {
@@ -108,46 +118,18 @@ const ProfileScreen = () => {
     }
   }, [feedbackModalVisible]);
 
-  const [profile, setProfile] = useState({
-    profilePicture: null,
-    name: "Loading...",
-    email: "Loading..."
-});
-
-  useEffect(() => {
-    const fetchUserData = async () => {
-        try {
-            const token = await AsyncStorage.getItem("authToken");
-            if (!token) return;
-
-            const response = await fetch("http:/192.168.100.10:8000/api/current-user/", {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Token ${token}`,
-                }
-            });
-
-            if (response.ok) {
-                const userData = await response.json();
-                setProfile({
-                    ...profile,
-                    name: userData.full_name || "No name set",
-                    email: userData.email
-                });
-            }
-        } catch (error) {
-            console.error("Error fetching user data:", error);
-        }
-    };
-
-    fetchUserData();
-}, []);
-
   if (!fontsLoaded) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#3498DB" />
+      </View>
+    );
+  }
+  
+  if (error) {
+    return (
+      <View>
+        <Text>Error loading profile: {error}</Text>
       </View>
     );
   }
