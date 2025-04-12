@@ -538,17 +538,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   allergyText: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#fff',
     fontFamily: 'IstokWeb-Regular',
   },
   selectedAllergyText: {
-    color: '#000',
+    color: '#FE7F2D',
   },
   blurView: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.35)', // Changed from 0.5 to 0.35 (15% lighter)
   },
   animatedModalView: {
     width: '90%',
@@ -556,22 +557,22 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: "100%",
-    backgroundColor: "#00272B",
-    padding: 16,
-    borderRadius: 10,
+    backgroundColor: "#1D1F1F", // Changed from #121414 to #1D1F1F (15% lighter)
+    padding: 20,
+    borderRadius: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 10,
     borderWidth: 1,
-    borderColor: '#FE7F2D',
+    borderColor: "#2D2F2F", // Changed from #202224 to #2D2F2F (15% lighter)
   },
   modalTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
-    marginBottom: 8,
-    color: "#FE7F2D",
+    marginBottom: 20,
+    color: "#FE7F2D", // Orange accent
     textAlign: 'center',
     fontFamily: 'IstokWeb-Regular',
   },
@@ -579,29 +580,32 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#ECF0F1",
+    borderBottomColor: "#FE7F2D",
   },
   selectedAllergy: {
-    backgroundColor: "#FE7F2D",
-    borderRadius: 4,
+    backgroundColor: "#282A2A", // Highlighted selection background
+    borderRadius: 6,
   },
   inputAllergy: {
-    flex: 1,
-    borderBottomWidth: 1,
-    borderBottomColor: "#7F8C8D",
-    marginTop: 8,
-    padding: 8,
+    backgroundColor: '#FBFCF8', // Changed from #1A1C1C to #252727 (15% lighter)
+    borderWidth: 1,
+    borderColor: "#2D2F2F", // Changed from #202224 to #2D2F2F (15% lighter)
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
     fontSize: 13,
-    color: "#fff",
+    color: "#1D1F1F",
     fontFamily: 'IstokWeb-Regular',
   },
   addAllergyContainer: {
+    justifyContent: 'center',
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 8,
   },
   addButton: {
-    marginLeft: 8,
+    marginLeft: 10,
+    marginBottom: 16,
   },
   modalButtonContainer: {
     flexDirection: 'row',
@@ -609,14 +613,16 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   modalButton: {
-    borderRadius: 6,
-    padding: 12,
-    elevation: 2,
+    borderRadius: 8,
+    padding: 14,
+    elevation: 0,
     minWidth: 100,
     alignItems: 'center',
+    flex: 1,
   },
   modalButtonClose: {
-    backgroundColor: '#FE7F2D',
+    backgroundColor: '#363838', // Changed from #282A2A to #363838 (15% lighter)
+    borderColor: '#434545', // Changed from #333536 to #434545 (15% lighter)
   },
   modalButtonText: {
     color: '#fff',

@@ -566,75 +566,79 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  // Modal styles
-  blurView: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+ // modal styles
+ blurView: {
+  flex: 1,
+  justifyContent: 'center',
+  alignItems: 'center',
+  backgroundColor: 'rgba(0, 0, 0, 0.35)', // Changed from 0.5 to 0.35 (15% lighter)
+},
   animatedModalView: {
     width: '90%',
     maxWidth: 400,
   },
   modalContent: {
     width: "100%",
-    backgroundColor: "#00272B",
-    padding: 16,
-    borderRadius: 10,
+    backgroundColor: "#1D1F1F", // Changed from #121414 to #1D1F1F (15% lighter)
+    padding: 20,
+    borderRadius: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 10,
     borderWidth: 1,
-    borderColor: '#FE7F2D',
+    borderColor: "#2D2F2F", // Changed from #202224 to #2D2F2F (15% lighter)
   },
   modalTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "600",
-    marginBottom: 16,
-    color: "#FE7F2D",
+    marginBottom: 20,
+    color: "#FE7F2D", // Orange accent
     textAlign: 'center',
     fontFamily: 'IstokWeb-Regular',
   },
   inputLabel: {
-    fontSize: 13,
+    fontSize: 14,
     marginBottom: 8,
-    color: "#FE7F2D",
+    color: "#FE7F2D", // Orange accent
     fontFamily: 'IstokWeb-Regular',
+    fontWeight: '500',
   },
   categoryScrollView: {
     maxHeight: 150,
     marginBottom: 16,
+    borderRadius: 8,
+    backgroundColor: '#FBFCF8', // Changed from #1A1C1C to #252727 (15% lighter)
   },
   categoryItem: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#7F8C8D",
+    borderBottomColor: "#1D1F1F", // Subtle divider
   },
   selectedCategory: {
-    backgroundColor: "#FE7F2D",
-    borderRadius: 4,
+    backgroundColor: "#FE7F2D", // Changed from #282A2A to #363838 (15% lighter)
+    borderRadius: 6,
   },
   categoryText: {
-    fontSize: 13,
-    color: "#FBFCF8",
+    fontSize: 14,
+    color: "#1D1F1F", // Light gray for regular text
     fontFamily: 'IstokWeb-Regular',
   },
   selectedCategoryText: {
-    color: "#00272B",
-    fontWeight: 'bold',
+    color: "#1D1F1F", // Orange accent for selected items
+    fontWeight: '600',
   },
   textInput: {
-    backgroundColor: 'rgba(251, 252, 248, 0.1)',
-    borderBottomWidth: 1,
-    borderBottomColor: "#7F8C8D",
-    borderRadius: 4,
-    padding: 10,
+    backgroundColor: '#FBFCF8', // Changed from #1A1C1C to #252727 (15% lighter)
+    borderWidth: 1,
+    borderColor: "#2D2F2F", // Changed from #202224 to #2D2F2F (15% lighter)
+    borderRadius: 8,
+    padding: 12,
     marginBottom: 16,
     fontSize: 13,
-    color: "#FBFCF8",
+    color: "#1D1F1F",
     fontFamily: 'IstokWeb-Regular',
   },
   messageInput: {
@@ -644,33 +648,34 @@ const styles = StyleSheet.create({
   modalButtonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 8,
+    marginTop: 16,
   },
   modalButton: {
-    borderRadius: 6,
-    padding: 12,
-    elevation: 2,
+    borderRadius: 8,
+    padding: 14,
+    elevation: 0,
     minWidth: 100,
     alignItems: 'center',
     flex: 1,
   },
   modalButtonClose: {
-    backgroundColor: 'red',
-    borderWidth: 1,
+    backgroundColor: '#363838', // Changed from #282A2A to #363838 (15% lighter)
     marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#434545', // Changed from #333536 to #434545 (15% lighter)
   },
   modalButtonSubmit: {
     backgroundColor: '#FE7F2D',
     marginLeft: 8,
   },
   modalButtonText: {
-    color: '#FBFCF8',
-    fontWeight: '500',
-    fontSize: 13,
+    fontWeight: '600',
+    fontSize: 14,
     fontFamily: 'IstokWeb-Regular',
+    color: '#FFFFFF',
   },
   disabledButton: {
-    opacity: 0.6,
+    opacity: 0.4,
   },
 });
 

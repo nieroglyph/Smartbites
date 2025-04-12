@@ -437,7 +437,7 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
           >
             <MaterialCommunityIcons name="keyboard-return" size={24} color="#FE7F2D" />
           </TouchableOpacity>
-          <Text style={styles.title}>Edit Profile</Text>
+          <Text style={styles.title}></Text>
           <View style={styles.rightHeaderSpace} />
         </View>
         
@@ -677,7 +677,7 @@ const styles = StyleSheet.create({
   label: {
     marginBottom: 4,
     fontWeight: '600',
-    color: '#FBFCF8',
+    color: '#FE7F2D',
     fontSize: 13,
   },
   input: {
@@ -706,8 +706,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#00272B',
     padding: 16,
     paddingBottom: 24,
-    borderTopWidth: 1,
-    borderTopColor: '#FE7F2D',
   },
   submitButton: {
     backgroundColor: '#FE7F2D',
@@ -803,58 +801,60 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.35)', // Changed from 0.5 to 0.35 (15% lighter)
   },
   animatedModalView: {
     width: '90%',
     maxWidth: 400,
   },
   modalView: {
-    backgroundColor: '#00272B',
+    backgroundColor: "#1D1F1F", // Changed from #121414 to #1D1F1F (15% lighter)
     borderRadius: 10,
-    padding: 16,
-    width: '100%',
+    padding: 20,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 10,
     borderWidth: 1,
-    borderColor: '#FE7F2D',
+    borderColor: "#2D2F2F", // Changed from #202224 to #2D2F2F (15% lighter)
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 16,
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 20,
+    color: "#FE7F2D", // Orange accent
     textAlign: 'center',
-    color: '#FBFCF8',
+    fontFamily: 'IstokWeb-Regular',
   },
   modalButtonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 8,
+    marginTop: 16,
   },
   modalButton: {
-    borderRadius: 6,
-    padding: 12,
-    elevation: 2,
-    flex: 1,
-    marginHorizontal: 4,
+    borderRadius: 8,
+    padding: 14,
+    elevation: 0,
+    minWidth: 100,
     alignItems: 'center',
+    flex: 1,
   },
   modalButtonClose: {
-    backgroundColor: 'red',
+    backgroundColor: '#363838', // Changed from #282A2A to #363838 (15% lighter)
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#434545', // Changed from #333536 to #434545 (15% lighter)
   },
   modalButtonSubmit: {
     backgroundColor: '#FE7F2D',
+    marginLeft: 8,
   },
   modalButtonText: {
-    color: 'white',
-    fontWeight: '500',
-    textAlign: 'center',
-    fontSize: 13,
+    fontWeight: '600',
+    fontSize: 14,
+    fontFamily: 'IstokWeb-Regular',
+    color: '#FFFFFF',
   },
   notificationContainer: {
     backgroundColor: '#f0f9f1',
