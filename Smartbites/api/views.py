@@ -210,3 +210,15 @@ def query_ollama(request):
 
     except Exception as e:
         return Response({"error": str(e)}, status=500)
+    
+# display profile in react
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def get_current_user(request):
+    """Get current user's basic info"""
+    user = request.user
+    return Response({
+        'email': user.email,
+        'full_name': user.full_name
+    })

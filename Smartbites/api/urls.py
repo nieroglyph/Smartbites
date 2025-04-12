@@ -10,6 +10,8 @@ from .views import save_recipe, get_user_recipes, delete_recipe
 from .views import nutrition_info, recipe_search
 # ollama
 from .views import query_ollama
+# display user data in react
+from .views import get_current_user
 
 urlpatterns = [
     path('register/', register_user, name='register'),
@@ -22,5 +24,6 @@ urlpatterns = [
     path('recipes/delete/<int:recipe_id>/', delete_recipe, name='delete_recipe'),
     path("nutrition/", nutrition_info, name="nutrition"),
     path("recipes/", recipe_search, name="recipes"),
-    path('query-ollama/', query_ollama, name='query_ollama')
+    path('query-ollama/', query_ollama, name='query_ollama'),
+    path('current-user/', get_current_user, name='current-user'),
 ]
