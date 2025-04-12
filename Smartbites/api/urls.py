@@ -12,6 +12,8 @@ from .views import nutrition_info, recipe_search
 from .views import query_ollama
 # display user data in react
 from .views import get_current_user
+# edit account, change password
+from .views import update_profile, change_password
 
 urlpatterns = [
     path('register/', register_user, name='register'),
@@ -26,4 +28,6 @@ urlpatterns = [
     path("recipes/", recipe_search, name="recipes"),
     path('query-ollama/', query_ollama, name='query_ollama'),
     path('current-user/', get_current_user, name='current-user'),
+    path('update-profile/', update_profile, name='update-profile'),
+    path('change-password/', change_password, name='change-password'),
 ]

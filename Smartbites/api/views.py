@@ -211,7 +211,7 @@ def query_ollama(request):
     except Exception as e:
         return Response({"error": str(e)}, status=500)
     
-# display profile in react
+# Get user data
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
@@ -222,3 +222,43 @@ def get_current_user(request):
         'email': user.email,
         'full_name': user.full_name
     })
+
+# Profile Edit
+from .serializers import UserSerializer
+
+@api_view(['PATCH'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def update_profile(request):
+    user = request.user
+    serializer = UserSerializer(user, data=request.data, partial=True)
+    
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data)
+    return Response(serializer.errors, status=400)
+
+# Password Change
+from .serializers import PasswordChangeSerializer
+from django.contrib.auth import update_session_auth_hash
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def change_password(request):
+    user = request.user
+    serializer = PasswordChangeSerializer(data=request.data)
+    
+    if serializer.is_valid():
+        # Verify old password first
+        if not user.check_password(serializer.validated_data['old_password']):
+            return Response({"old_password": ["Wrong current password"]}, status=400)
+            
+        user.set_password(serializer.validated_data['new_password1'])
+        user.save()
+        
+        # Keep user logged in after password change
+        update_session_auth_hash(request, user)
+        
+        return Response({'detail': 'Password updated successfully'})
+    return Response(serializer.errors, status=400)
