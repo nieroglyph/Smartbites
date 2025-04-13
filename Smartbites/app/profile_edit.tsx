@@ -670,11 +670,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   inputContainer: {
-    marginBottom: 12,
+    marginBottom: 25,
     paddingHorizontal: 3,
   },
   label: {
-    marginBottom: 4,
+    marginBottom: 5,
     fontWeight: '600',
     color: '#FE7F2D',
     fontSize: 14,
@@ -685,7 +685,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     padding: 10,
     fontSize: 14,
-    backgroundColor: '#FBFCF8',
+    backgroundColor: 'rgba(255,255,255,0.9)',
     color: '#00272B',
     height: 40,
   },
@@ -807,7 +807,7 @@ const styles = StyleSheet.create({
     maxWidth: 400,
   },
   modalView: {
-    backgroundColor: "#1D1F1F",
+    backgroundColor: "#003B46",
     borderRadius: 10,
     padding: 20,
     shadowColor: '#000',
@@ -820,9 +820,9 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 20,
-    color: "#FE7F2D", // Orange
+    fontWeight: "700",
+    marginBottom: 30,
+    color: "#E0FF4F",
     textAlign: 'center',
     fontFamily: 'IstokWeb-Regular',
   },
@@ -840,14 +840,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modalButtonClose: {
-    backgroundColor: '#363838',
+    backgroundColor: 'rgba(255,255,255,0.1)',
     marginRight: 8,
     borderWidth: 1,
     borderColor: '#434545',
   },
   modalButtonSubmit: {
     backgroundColor: '#FE7F2D',
-    marginLeft: 8,
+    marginLeft: 3,
   },
   modalButtonText: {
     fontWeight: '600',

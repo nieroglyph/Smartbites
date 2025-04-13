@@ -66,7 +66,7 @@ const ProfileScreen = () => {
   // Animation refs
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
-
+ const slideAnim = useRef(new Animated.Value(-50)).current;
   const feedbackCategories: FeedbackCategory[] = [
     'General Feedback',
     'Suggestions / Feature Requests',
@@ -83,13 +83,19 @@ const ProfileScreen = () => {
       Animated.parallel([
         Animated.timing(scaleAnim, {
           toValue: 1,
-          duration: 200,
-          easing: Easing.out(Easing.cubic),
+          duration: 300,
+          easing: Easing.out(Easing.back(1.7)),
           useNativeDriver: true,
         }),
         Animated.timing(opacityAnim, {
           toValue: 1,
-          duration: 200,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 300,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
       ]).start();
@@ -97,12 +103,17 @@ const ProfileScreen = () => {
       Animated.parallel([
         Animated.timing(scaleAnim, {
           toValue: 0.8,
-          duration: 150,
+          duration: 200,
           useNativeDriver: true,
         }),
         Animated.timing(opacityAnim, {
           toValue: 0,
-          duration: 150,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: -50,
+          duration: 200,
           useNativeDriver: true,
         }),
       ]).start();
@@ -340,7 +351,10 @@ const ProfileScreen = () => {
                 style={[
                   styles.animatedModalView,
                   {
-                    transform: [{ scale: scaleAnim }],
+                    transform: [
+                      { scale: scaleAnim },
+                      { translateY: slideAnim }
+                    ],
                     opacity: opacityAnim,
                   }
                 ]}
@@ -579,7 +593,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: "100%",
-    backgroundColor: "#1D1F1F",
+    backgroundColor: "#002F38",
     padding: 20,
     borderRadius: 12,
     shadowColor: '#000',
@@ -592,16 +606,16 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "700",
     marginBottom: 20,
-    color: "#FE7F2D", // Orange
+    color: "#E0FF4F",
     textAlign: 'center',
     fontFamily: 'IstokWeb-Regular',
   },
   inputLabel: {
     fontSize: 14,
     marginBottom: 8,
-    color: "#FE7F2D", // Orange
+    color: "#FE7F2D",
     fontFamily: 'IstokWeb-Regular',
     fontWeight: '500',
   },
@@ -609,7 +623,7 @@ const styles = StyleSheet.create({
     maxHeight: 150,
     marginBottom: 16,
     borderRadius: 8,
-    backgroundColor: '#FBFCF8',
+    backgroundColor: 'rgba(255,255,255,0.9)',
   },
   categoryItem: {
     paddingVertical: 12,
@@ -618,20 +632,20 @@ const styles = StyleSheet.create({
     borderBottomColor: "#1D1F1F",
   },
   selectedCategory: {
-    backgroundColor: "#FE7F2D",
-    borderRadius: 6,
+    backgroundColor: "#003B46",
+    borderRadius: 0,
   },
   categoryText: {
     fontSize: 14,
-    color: "#1D1F1F", // Light gray
+    color: "#1D1F1F",
     fontFamily: 'IstokWeb-Regular',
   },
   selectedCategoryText: {
-    color: "#1D1F1F", // Orange
+    color: "rgba(255,255,255,0.9)",
     fontWeight: '600',
   },
   textInput: {
-    backgroundColor: '#FBFCF8',
+    backgroundColor: 'rgba(255,255,255,0.9)',
     borderWidth: 1,
     borderColor: "#2D2F2F",
     borderRadius: 8,
@@ -659,14 +673,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modalButtonClose: {
-    backgroundColor: '#363838',
+    backgroundColor: 'rgba(255,255,255,0.1)',
     marginRight: 8,
     borderWidth: 1,
     borderColor: '#434545',
   },
   modalButtonSubmit: {
     backgroundColor: '#FE7F2D',
-    marginLeft: 8,
+    marginLeft: 3,
   },
   modalButtonText: {
     fontWeight: '600',

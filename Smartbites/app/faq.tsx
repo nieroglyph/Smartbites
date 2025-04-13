@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   faqContainer: {
-    backgroundColor: "#FBFCF8",
+    backgroundColor: "rgba(255,255,255,0.9)",
     borderRadius: 10,
     padding: 16,
     marginTop: 10,

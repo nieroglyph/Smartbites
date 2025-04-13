@@ -12,7 +12,10 @@ import {
   Pressable,
   TouchableWithoutFeedback,
   Easing,
-  Keyboard
+  Keyboard,
+  Alert,
+  ToastAndroid,
+  Platform
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -46,15 +49,18 @@ const UserprofileScreen = () => {
   });
 
   const [selectedAllowance, setSelectedAllowance] = useState('Weekly');
+  const [allowanceAmount, setAllowanceAmount] = useState('');
   const [selectedDiet, setSelectedDiet] = useState('Vegan');
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
   const [newAllergy, setNewAllergy] = useState('');
   const [showAllergiesModal, setShowAllergiesModal] = useState(false);
   const [showAllowanceOptions, setShowAllowanceOptions] = useState(false);
   const [showDietOptions, setShowDietOptions] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(-50)).current;
   const allowanceRef = useRef<View>(null);
   const dietRef = useRef<View>(null);
 
@@ -63,13 +69,19 @@ const UserprofileScreen = () => {
       Animated.parallel([
         Animated.timing(scaleAnim, {
           toValue: 1,
-          duration: 200,
-          easing: Easing.out(Easing.cubic),
+          duration: 300,
+          easing: Easing.out(Easing.back(1.7)),
           useNativeDriver: true,
         }),
         Animated.timing(opacityAnim, {
           toValue: 1,
-          duration: 200,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 300,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
       ]).start();
@@ -77,17 +89,40 @@ const UserprofileScreen = () => {
       Animated.parallel([
         Animated.timing(scaleAnim, {
           toValue: 0.8,
-          duration: 150,
+          duration: 200,
           useNativeDriver: true,
         }),
         Animated.timing(opacityAnim, {
           toValue: 0,
-          duration: 150,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: -50,
+          duration: 200,
           useNativeDriver: true,
         }),
       ]).start();
     }
   }, [showAllergiesModal]);
+
+  // Load saved allowance data on component mount
+  useEffect(() => {
+    const loadAllowance = async () => {
+      try {
+        const savedAllowance = await AsyncStorage.getItem('userAllowance');
+        if (savedAllowance) {
+          const { frequency, amount } = JSON.parse(savedAllowance);
+          setSelectedAllowance(frequency);
+          setAllowanceAmount(amount);
+        }
+      } catch (error) {
+        console.error('Failed to load allowance', error);
+      }
+    };
+
+    loadAllowance();
+  }, []);
 
   // Handle taps outside dropdowns
   useEffect(() => {
@@ -115,17 +150,44 @@ const UserprofileScreen = () => {
     }
   }, [showAllowanceOptions, showDietOptions]);
 
-  if (!fontsLoaded) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3498DB" />
-      </View>
-    );
-  }
+  const showAlert = (message: string) => {
+    if (Platform.OS === 'android') {
+      ToastAndroid.show(message, ToastAndroid.SHORT);
+    } else {
+      Alert.alert('Invalid Input', message);
+    }
+  };
+
+  const handleNumericInput = (text: string, callback: (value: string) => void) => {
+    const numericText = text.replace(/[^0-9]/g, '');
+    if (text !== numericText) showAlert('Please enter numbers only.');
+    callback(numericText);
+  };
+
+  const saveAllowance = async () => {
+    if (!allowanceAmount) {
+      showAlert('Please enter an allowance amount');
+      return;
+    }
+
+    try {
+      await AsyncStorage.setItem('userAllowance', JSON.stringify({
+        frequency: selectedAllowance,
+        amount: allowanceAmount
+      }));
+      showAlert(`${selectedAllowance} allowance saved successfully!`);
+    } catch (error) {
+      showAlert('Failed to save allowance.');
+    }
+  };
 
   const commonAllergies = [
     'Peanuts', 'Shellfish', 'Eggs', 'Milk', 'Wheat', 'Soy', 'Tree Nuts', 'Fish', 'Gluten', 'Sesame'
   ];
+
+  const filteredAllergies = commonAllergies.filter(allergy => 
+    allergy.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const allowanceOptions = ['Weekly', 'Monthly'];
   const dietOptions = ['Vegan', 'Keto', 'Vegetarian', 'Omnivore'];
@@ -140,6 +202,14 @@ const UserprofileScreen = () => {
       setNewAllergy('');
     }
   };
+
+  if (!fontsLoaded) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#3498DB" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.mainContainer}>
@@ -218,6 +288,24 @@ const UserprofileScreen = () => {
                     ))}
                   </View>
                 )}
+
+                {/* Allowance Amount Input */}
+                <View style={styles.allowanceInputContainer}>
+                  <TextInput
+                    style={styles.allowanceInput}
+                    keyboardType="numeric"
+                    placeholder="Enter allowance amount"
+                    value={allowanceAmount}
+                    onChangeText={text => handleNumericInput(text, setAllowanceAmount)}
+                    placeholderTextColor="#7F8C8D"
+                  />
+                  <TouchableOpacity
+                    style={styles.saveAllowanceButton}
+                    onPress={saveAllowance}
+                  >
+                    <Text style={styles.saveAllowanceButtonText}>Save</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {/* Dietary Preference Selection */}
@@ -267,7 +355,10 @@ const UserprofileScreen = () => {
               {/* Allergies */}
               <TouchableOpacity
                 style={styles.settingItem}
-                onPress={() => setShowAllergiesModal(true)}
+                onPress={() => {
+                  setShowAllergiesModal(true);
+                  setSearchQuery('');
+                }}
                 activeOpacity={0.7}
               >
                 <MaterialCommunityIcons name="allergy" size={18} color="#FE7F2D" />
@@ -305,14 +396,14 @@ const UserprofileScreen = () => {
       
       <Modal
         visible={showAllergiesModal}
-        animationType="fade"
+        animationType="none"
         transparent={true}
         onRequestClose={() => setShowAllergiesModal(false)}
       >
         <TouchableWithoutFeedback onPress={() => setShowAllergiesModal(false)}>
           <BlurView
             style={styles.blurView}
-            intensity={20}
+            intensity={50}
             tint="dark"
           >
             <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
@@ -320,53 +411,81 @@ const UserprofileScreen = () => {
                 style={[
                   styles.animatedModalView,
                   {
-                    transform: [{ scale: scaleAnim }],
+                    transform: [
+                      { scale: scaleAnim },
+                      { translateY: slideAnim }
+                    ],
                     opacity: opacityAnim,
                   }
                 ]}
               >
                 <View style={styles.modalContent}>
-                  <Text style={styles.modalTitle}>Select Allergies</Text>
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Dietary Restrictions</Text>
+                  </View>
                   
-                  {commonAllergies.map((allergy, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      style={[ 
-                        styles.allergyItem,
-                        selectedAllergies.includes(allergy) && styles.selectedAllergy,
-                      ]}
-                      onPress={() => {
-                        if (selectedAllergies.includes(allergy)) {
-                          setSelectedAllergies(selectedAllergies.filter(item => item !== allergy));
-                        } else {
-                          setSelectedAllergies([...selectedAllergies, allergy]);
-                        }
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[styles.allergyText, selectedAllergies.includes(allergy) && styles.selectedAllergyText]}>{allergy}</Text>
-                    </TouchableOpacity>
-                  ))}
+                  <Text style={styles.modalSubtitle}>Common Food Allergens</Text>
+                  
+                  <ScrollView style={styles.allergyList}>
+                    {commonAllergies.map((allergy, index) => (
+                      <TouchableOpacity
+                        key={index}
+                        style={[ 
+                          styles.allergyItem,
+                          selectedAllergies.includes(allergy) && styles.selectedAllergy,
+                          index === commonAllergies.length - 1 && styles.lastAllergyItem
+                        ]}
+                        onPress={() => {
+                          if (selectedAllergies.includes(allergy)) {
+                            setSelectedAllergies(selectedAllergies.filter(item => item !== allergy));
+                          } else {
+                            setSelectedAllergies([...selectedAllergies, allergy]);
+                          }
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[
+                          styles.allergyItemText, 
+                          selectedAllergies.includes(allergy) && styles.selectedAllergyText
+                        ]}>
+                          {allergy}
+                        </Text>
+                        {selectedAllergies.includes(allergy) && (
+                          <View style={styles.checkmarkContainer}>
+                            <Ionicons name="checkmark-circle" size={20} color="#FE7F2D" />
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                  
+                  <View style={styles.divider} />
+                  
+                  <Text style={styles.customAllergyTitle}>Add Food Allergen</Text>
                   
                   <View style={styles.addAllergyContainer}>
                     <TextInput
                       style={styles.inputAllergy}
                       value={newAllergy}
                       onChangeText={setNewAllergy}
-                      placeholder="Add custom allergy"
+                      placeholder="Type allergen name"
                       placeholderTextColor="#7F8C8D"
                     />
                     <TouchableOpacity
-                      style={styles.addButton}
+                      style={[
+                        styles.addButton,
+                        !newAllergy && styles.addButtonDisabled
+                      ]}
                       onPress={handleAddAllergy}
+                      disabled={!newAllergy}
                     >
-                      <Ionicons name="add" size={20} color="#FE7F2D" />
+                      <Text style={styles.addButtonText}>Add</Text>
                     </TouchableOpacity>
                   </View>
 
                   <View style={styles.modalButtonContainer}>
                     <Pressable
-                      style={[styles.modalButton, styles.modalButtonClose]}
+                      style={styles.modalButtonSave}
                       onPress={() => setShowAllergiesModal(false)}
                     >
                       <Text style={styles.modalButtonText}>Close</Text>
@@ -542,9 +661,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontFamily: 'IstokWeb-Regular',
   },
-  selectedAllergyText: {
-    color: '#FE7F2D',
-  },
   blurView: {
     flex: 1,
     justifyContent: 'center',
@@ -554,11 +670,12 @@ const styles = StyleSheet.create({
   animatedModalView: {
     width: '90%',
     maxWidth: 400,
+    maxHeight: '85%',
   },
+
   modalContent: {
     width: "100%",
-    backgroundColor: "#1D1F1F",
-    padding: 20,
+    backgroundColor: "#002F38",
     borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 5 },
@@ -567,68 +684,209 @@ const styles = StyleSheet.create({
     elevation: 10,
     borderWidth: 1,
     borderColor: "#2D2F2F",
+    overflow: 'hidden',
+  },
+  modalHeader: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomColor: "#2D2F2F",
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 20,
-    color: "#FE7F2D", // Orange
+    fontWeight: "700",
+    color: "#E0FF4F",
+    fontFamily: 'IstokWeb-Regular',
     textAlign: 'center',
+  },
+  modalCloseButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#434545',
+  },
+  modalSubtitle: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#FE7F2D",
+    marginTop: 16,
+    marginBottom: 8,
+    paddingHorizontal: 20,
     fontFamily: 'IstokWeb-Regular',
   },
+  allergyList: {
+    maxHeight: 220,
+    paddingHorizontal: 20,
+  },
   allergyItem: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#FE7F2D",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginBottom: 6,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderWidth: 1,
+    borderColor: '#2D2F2F',
+  },
+  lastAllergyItem: {
+    marginBottom: 0,
+  },
+  allergyItemText: {
+    fontSize: 16,
+    color: "#1D1F1F",
+    fontFamily: 'IstokWeb-Regular',
   },
   selectedAllergy: {
-    backgroundColor: "#282A2A",
-    borderRadius: 6,
+    backgroundColor: "#003B46",
+    borderColor: '#003B46',
+  },
+  selectedAllergyText: {
+    color: "rgba(255,255,255,0.9)",
+    fontWeight: '600',
+  },
+  checkmarkContainer: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  divider: {
+    height: 1,
+    marginVertical: 16,
+    marginHorizontal: 20,
+  },
+  customAllergyTitle: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#FE7F2D",
+    marginBottom: 12,
+    paddingHorizontal: 20,
+    fontFamily: 'IstokWeb-Regular',
+  },
+  addAllergyContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 16,
   },
   inputAllergy: {
-    backgroundColor: '#FBFCF8',
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.9)',
     borderWidth: 1,
     borderColor: "#2D2F2F",
     borderRadius: 8,
     padding: 12,
-    marginBottom: 16,
     fontSize: 14,
     color: "#1D1F1F",
     fontFamily: 'IstokWeb-Regular',
   },
-  addAllergyContainer: {
-    justifyContent: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-  },
   addButton: {
     marginLeft: 10,
-    marginBottom: 16,
+    backgroundColor: '#FE7F2D',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addButtonDisabled: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  addButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 14,
+    fontFamily: 'IstokWeb-Regular',
   },
   modalButtonContainer: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#2D2F2F',
     flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 16,
+    justifyContent: 'space-between',
   },
-  modalButton: {
+  modalButtonSave: {
+    backgroundColor: '#FE7F2D',
     borderRadius: 8,
     padding: 14,
-    elevation: 0,
-    minWidth: 100,
     alignItems: 'center',
     flex: 1,
   },
-  modalButtonClose: {
-    backgroundColor: '#363838',
-    borderColor: '#434545',
-  },
   modalButtonText: {
-    color: '#fff',
-    fontWeight: '500',
+    color: '#FFFFFF',
+    fontWeight: '600',
     fontSize: 14,
     fontFamily: 'IstokWeb-Regular',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderWidth: 1,
+    borderColor: '#2D2F2F',
+    borderRadius: 8,
+    marginHorizontal: 20,
+    marginTop: 16,
+    paddingHorizontal: 12,
+  },
+  searchIcon: {
+    marginRight: 8,
+    color: "#1D1F1F",
+  },
+  searchInput: {
+    flex: 1,
+    height: 40,
+    color: '#1D1F1F',
+    fontSize: 14,
+    fontFamily: 'IstokWeb-Regular',
+  },
+  clearSearch: {
+    padding: 4,
+  },
+  noResultsContainer: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  noResultsText: {
+    color: '#1D1F1F',
+    fontFamily: 'IstokWeb-Regular',
+    fontSize: 14,
+  },
+
+  allowanceInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 15,
+    paddingHorizontal: 10,
+  },
+  allowanceInput: {
+    flex: 1,
+    backgroundColor: '#FBFCF8',
+    borderWidth: 1,
+    borderColor: '#ECF0F1',
+    borderRadius: 5,
+    padding: 12,
+    marginRight: 10,
+    color: '#34495E',
+    fontFamily: 'IstokWeb-Regular',
+  },
+  saveAllowanceButton: {
+    backgroundColor: '#FE7F2D',
+    borderRadius: 5,
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+  },
+  saveAllowanceButtonText: {
+    color: 'white',
+    fontFamily: 'IstokWeb-Regular',
+    fontWeight: 'bold',
   },
 });
 
