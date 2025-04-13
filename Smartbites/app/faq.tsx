@@ -144,24 +144,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#00272B',
   },
   returnButton: {
-    marginBottom: 5,
+    marginBottom: 12,
     marginRight: 15,
   },
   headerTextContainer: {
     flex: 1,
   },
   rightHeaderSpace: {
-    width: 24,
+    width: 'auto',
   },
   titleText: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '600',
     color: '#FE7F2D',
     marginBottom: 4,
     fontFamily: 'IstokWeb-Regular',
   },
   subtitleText: {
-    fontSize: 10,
+    fontSize: 14,
     color: '#FBFCF8',
     fontFamily: 'IstokWeb-Regular',
   },
@@ -187,14 +187,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   questionText: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
     color: "#00272B",
     marginBottom: 8,
     fontFamily: 'IstokWeb-Regular',
   },
   answerText: {
-    fontSize: 13,
+    fontSize: 14,
     color: "#34495E",
     fontFamily: 'IstokWeb-Regular',
     lineHeight: 20,
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
   },
   contactText: {
     color: "#FBFCF8",
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '500',
     marginLeft: 8,
     fontFamily: 'IstokWeb-Regular',

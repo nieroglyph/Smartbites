@@ -724,7 +724,7 @@ const styles = StyleSheet.create({
   },
   messageTime: {
     color: 'rgba(255, 255, 255, 0.6)',
-    fontSize: 11,
+    fontSize: 12,
     marginTop: 4,
     alignSelf: 'flex-end',
   },
@@ -740,7 +740,7 @@ const styles = StyleSheet.create({
   },
   inputWrapper: {
     position: 'absolute',
-    bottom: 60,
+    bottom: 70,
     left: 0,
     right: 0,
     backgroundColor: '#00272B',

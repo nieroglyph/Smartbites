@@ -497,14 +497,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   userName: {
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: "600",
     color: "#2C3E50",
     marginBottom: 4,
     fontFamily: 'IstokWeb-Regular',
   },
   accountNumber: {
-    fontSize: 13,
+    fontSize: 14,
     color: "#7F8C8D",
     fontFamily: 'IstokWeb-Regular',
   },
@@ -525,7 +525,7 @@ const styles = StyleSheet.create({
   },
   settingText: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 16,
     marginLeft: 12,
     color: "#34495E",
     fontFamily: 'IstokWeb-Regular',
@@ -556,7 +556,7 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     color: "#E74C3C",
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: '500',
     marginLeft: 8,
     fontFamily: 'IstokWeb-Regular',
@@ -571,7 +571,7 @@ const styles = StyleSheet.create({
   flex: 1,
   justifyContent: 'center',
   alignItems: 'center',
-  backgroundColor: 'rgba(0, 0, 0, 0.35)', // Changed from 0.5 to 0.35 (15% lighter)
+  backgroundColor: 'rgba(0, 0, 0, 0.35)',
 },
   animatedModalView: {
     width: '90%',
@@ -579,7 +579,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: "100%",
-    backgroundColor: "#1D1F1F", // Changed from #121414 to #1D1F1F (15% lighter)
+    backgroundColor: "#1D1F1F",
     padding: 20,
     borderRadius: 12,
     shadowColor: '#000',
@@ -588,20 +588,20 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 10,
     borderWidth: 1,
-    borderColor: "#2D2F2F", // Changed from #202224 to #2D2F2F (15% lighter)
+    borderColor: "#2D2F2F",
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: "600",
     marginBottom: 20,
-    color: "#FE7F2D", // Orange accent
+    color: "#FE7F2D", // Orange
     textAlign: 'center',
     fontFamily: 'IstokWeb-Regular',
   },
   inputLabel: {
     fontSize: 14,
     marginBottom: 8,
-    color: "#FE7F2D", // Orange accent
+    color: "#FE7F2D", // Orange
     fontFamily: 'IstokWeb-Regular',
     fontWeight: '500',
   },
@@ -609,35 +609,35 @@ const styles = StyleSheet.create({
     maxHeight: 150,
     marginBottom: 16,
     borderRadius: 8,
-    backgroundColor: '#FBFCF8', // Changed from #1A1C1C to #252727 (15% lighter)
+    backgroundColor: '#FBFCF8',
   },
   categoryItem: {
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#1D1F1F", // Subtle divider
+    borderBottomColor: "#1D1F1F",
   },
   selectedCategory: {
-    backgroundColor: "#FE7F2D", // Changed from #282A2A to #363838 (15% lighter)
+    backgroundColor: "#FE7F2D",
     borderRadius: 6,
   },
   categoryText: {
     fontSize: 14,
-    color: "#1D1F1F", // Light gray for regular text
+    color: "#1D1F1F", // Light gray
     fontFamily: 'IstokWeb-Regular',
   },
   selectedCategoryText: {
-    color: "#1D1F1F", // Orange accent for selected items
+    color: "#1D1F1F", // Orange
     fontWeight: '600',
   },
   textInput: {
-    backgroundColor: '#FBFCF8', // Changed from #1A1C1C to #252727 (15% lighter)
+    backgroundColor: '#FBFCF8',
     borderWidth: 1,
-    borderColor: "#2D2F2F", // Changed from #202224 to #2D2F2F (15% lighter)
+    borderColor: "#2D2F2F",
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
-    fontSize: 13,
+    fontSize: 14,
     color: "#1D1F1F",
     fontFamily: 'IstokWeb-Regular',
   },
@@ -659,10 +659,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modalButtonClose: {
-    backgroundColor: '#363838', // Changed from #282A2A to #363838 (15% lighter)
+    backgroundColor: '#363838',
     marginRight: 8,
     borderWidth: 1,
-    borderColor: '#434545', // Changed from #333536 to #434545 (15% lighter)
+    borderColor: '#434545',
   },
   modalButtonSubmit: {
     backgroundColor: '#FE7F2D',

@@ -632,7 +632,6 @@ const styles = StyleSheet.create({
     marginRight: 15,
   },
   title: {
-    fontSize: 20,
     fontWeight: 'bold',
     color: '#FBFCF8',
     flex: 1,
@@ -668,7 +667,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 13,
+    fontSize: 14,
   },
   inputContainer: {
     marginBottom: 12,
@@ -678,14 +677,14 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     fontWeight: '600',
     color: '#FE7F2D',
-    fontSize: 13,
+    fontSize: 14,
   },
   input: {
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 5,
     padding: 10,
-    fontSize: 13,
+    fontSize: 14,
     backgroundColor: '#FBFCF8',
     color: '#00272B',
     height: 40,
@@ -695,7 +694,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: 'red',
-    fontSize: 12,
+    fontSize: 13,
     marginTop: 4,
   },
   fixedButtonContainer: {
@@ -716,7 +715,7 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: '#FBFCF8',
     fontWeight: '500',
-    fontSize: 13,
+    fontSize: 14,
   },
   bottomSpacer: {
     height: 60,
@@ -795,20 +794,20 @@ const styles = StyleSheet.create({
   changePasswordButtonText: {
     color: '#FE7F2D',
     fontWeight: '500',
-    fontSize: 13,
+    fontSize: 14,
   },
   blurView: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.35)', // Changed from 0.5 to 0.35 (15% lighter)
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
   },
   animatedModalView: {
     width: '90%',
     maxWidth: 400,
   },
   modalView: {
-    backgroundColor: "#1D1F1F", // Changed from #121414 to #1D1F1F (15% lighter)
+    backgroundColor: "#1D1F1F",
     borderRadius: 10,
     padding: 20,
     shadowColor: '#000',
@@ -817,13 +816,13 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 10,
     borderWidth: 1,
-    borderColor: "#2D2F2F", // Changed from #202224 to #2D2F2F (15% lighter)
+    borderColor: "#2D2F2F",
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: "600",
     marginBottom: 20,
-    color: "#FE7F2D", // Orange accent
+    color: "#FE7F2D", // Orange
     textAlign: 'center',
     fontFamily: 'IstokWeb-Regular',
   },
@@ -841,10 +840,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modalButtonClose: {
-    backgroundColor: '#363838', // Changed from #282A2A to #363838 (15% lighter)
+    backgroundColor: '#363838',
     marginRight: 8,
     borderWidth: 1,
-    borderColor: '#434545', // Changed from #333536 to #434545 (15% lighter)
+    borderColor: '#434545',
   },
   modalButtonSubmit: {
     backgroundColor: '#FE7F2D',
@@ -872,7 +871,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     color: '#2a7f3a',
     fontWeight: '500',
-    fontSize: 13,
+    fontSize: 14,
   },
 });
 
