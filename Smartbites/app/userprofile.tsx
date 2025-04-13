@@ -246,8 +246,8 @@ const UserprofileScreen = () => {
             </View>
 
             <View style={styles.settingsContainer}>
-              {/* Allowance Selection */}
-              <View ref={allowanceRef}>
+              {/* Allowance Section */}
+              <View ref={allowanceRef} style={styles.allowanceSection}>
                 <TouchableOpacity
                   style={styles.settingItem}
                   onPress={(e) => {
@@ -258,58 +258,70 @@ const UserprofileScreen = () => {
                   activeOpacity={0.7}
                 >
                   <MaterialCommunityIcons name="cash" size={18} color="#FE7F2D" />
-                  <Text style={styles.settingText}>Allowance: {selectedAllowance}</Text>
+                  <Text style={styles.settingText}>
+                    Allowance: {selectedAllowance} {allowanceAmount ? `(₱${allowanceAmount}.00)` : ''}
+                  </Text>
                   <Ionicons name={showAllowanceOptions ? "chevron-down" : "chevron-forward"} size={16} color="#FE7F2D" />
                 </TouchableOpacity>
 
                 {showAllowanceOptions && (
-                  <View style={styles.optionsContainer}>
-                    {allowanceOptions.map((option, index) => (
+                  <View style={styles.dropdownContainer}>
+                    <View style={styles.optionsContainer}>
+                      {allowanceOptions.map((option, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          style={[
+                            styles.optionItem,
+                            selectedAllowance === option && styles.selectedOption
+                          ]}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            setSelectedAllowance(option);
+                          }}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[
+                            styles.optionText,
+                            selectedAllowance === option && styles.selectedOptionText
+                          ]}>
+                            {option}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+
+                    {/* Integrated Allowance Input */}
+                    <View style={styles.allowanceInputWrapper}>
+                      <View style={styles.amountInputContainer}>
+                        <Text style={styles.amountInputLabel}>Amount</Text>
+                        <View style={styles.amountInputField}>
+                          <Text style={styles.currencySymbol}>₱</Text>
+                          <TextInput
+                            style={styles.allowanceInput}
+                            keyboardType="numeric"
+                            placeholder="0.00"
+                            value={allowanceAmount}
+                            onChangeText={text => handleNumericInput(text, setAllowanceAmount)}
+                            placeholderTextColor="#7F8C8D"
+                          />
+                        </View>
+                      </View>
                       <TouchableOpacity
-                        key={index}
-                        style={[
-                          styles.optionItem,
-                          selectedAllowance === option && styles.selectedOption
-                        ]}
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          setSelectedAllowance(option);
+                        style={styles.saveAllowanceButton}
+                        onPress={() => {
+                          saveAllowance();
                           setShowAllowanceOptions(false);
                         }}
-                        activeOpacity={0.7}
                       >
-                        <Text style={[
-                          styles.optionText,
-                          selectedAllowance === option && styles.selectedOptionText
-                        ]}>
-                          {option}
-                        </Text>
+                        <Text style={styles.saveAllowanceButtonText}>Save</Text>
                       </TouchableOpacity>
-                    ))}
+                    </View>
                   </View>
                 )}
-
-                {/* Allowance Amount Input */}
-                <View style={styles.allowanceInputContainer}>
-                  <TextInput
-                    style={styles.allowanceInput}
-                    keyboardType="numeric"
-                    placeholder="Enter allowance amount"
-                    value={allowanceAmount}
-                    onChangeText={text => handleNumericInput(text, setAllowanceAmount)}
-                    placeholderTextColor="#7F8C8D"
-                  />
-                  <TouchableOpacity
-                    style={styles.saveAllowanceButton}
-                    onPress={saveAllowance}
-                  >
-                    <Text style={styles.saveAllowanceButtonText}>Save</Text>
-                  </TouchableOpacity>
-                </View>
               </View>
 
               {/* Dietary Preference Selection */}
-              <View ref={dietRef}>
+              <View ref={dietRef} style={styles.dietSection}>
                 <TouchableOpacity
                   style={styles.settingItem}
                   onPress={(e) => {
@@ -325,13 +337,14 @@ const UserprofileScreen = () => {
                 </TouchableOpacity>
 
                 {showDietOptions && (
-                  <View style={styles.optionsContainer}>
+                  <View style={[styles.optionsContainer, styles.dietOptionsContainer]}>
                     {dietOptions.map((option, index) => (
                       <TouchableOpacity
                         key={index}
                         style={[
                           styles.optionItem,
-                          selectedDiet === option && styles.selectedOption
+                          selectedDiet === option && styles.selectedOption,
+                          index === dietOptions.length - 1 && styles.lastOptionItem
                         ]}
                         onPress={(e) => {
                           e.stopPropagation();
@@ -580,14 +593,22 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingHorizontal: 3,
   },
-  settingItem: {
+  allowanceSection: {
+    marginBottom: 8,
+    backgroundColor: "#FBFCF8",
     borderRadius: 5,
-    marginBottom: 4,
+    overflow: 'hidden',
+  },
+  dropdownContainer: {
+    backgroundColor: '#FBFCF8',
+  },
+  settingItem: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FBFCF8",
     padding: 14,
     borderBottomWidth: 1,
+    borderRadius: 5,
     borderBottomColor: "#ECF0F1",
     height: 50,
   },
@@ -600,13 +621,20 @@ const styles = StyleSheet.create({
   },
   optionsContainer: {
     backgroundColor: '#FBFCF8',
-    borderRadius: 5,
-    marginBottom: 8,
     padding: 8,
+  },
+  dietOptionsContainer: {
+    borderBottomLeftRadius: 5,
+    borderBottomRightRadius: 5,
+    overflow: 'hidden',
   },
   optionItem: {
     paddingVertical: 10,
     paddingHorizontal: 12,
+  },
+  lastOptionItem: {
+    borderBottomLeftRadius: 4,
+    borderBottomRightRadius: 4,
   },
   selectedOption: {
     backgroundColor: '#FE7F2D',
@@ -620,9 +648,73 @@ const styles = StyleSheet.create({
   selectedOptionText: {
     color: '#fff',
   },
+  allowanceInputWrapper: {
+    backgroundColor: "#FBFCF8",
+    padding: 15,
+    borderBottomLeftRadius: 5,
+    borderBottomRightRadius: 5,
+  },
+  amountInputContainer: {
+    borderTopWidth: 1,
+    borderColor: "#FE7F2D",
+    marginBottom: 12,
+  },
+  amountInputLabel: {
+    fontSize: 16,
+    color: "#34495E",
+    marginBottom: 6,
+    fontFamily: 'IstokWeb-Regular',
+    fontWeight: "700",
+    paddingTop: 8,
+  },
+  amountInputField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: "#ECF0F1",
+    borderRadius: 5,
+    height: 46,
+  },
+  currencySymbol: {
+    fontSize: 16,
+    color: "#34495E",
+    paddingHorizontal: 12,
+    fontFamily: 'IstokWeb-Regular',
+  },
+  allowanceInput: {
+    flex: 1,
+    height: '100%',
+    color: '#34495E',
+    fontSize: 16,
+    fontFamily: 'IstokWeb-Regular',
+  },
+  saveAllowanceButton: {
+    backgroundColor: '#FE7F2D',
+    borderRadius: 5,
+    height: 46,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  saveAllowanceButtonText: {
+    color: 'white',
+    fontFamily: 'IstokWeb-Regular',
+    fontSize: 16,
+    fontWeight: "600",
+  },
   selectedAllergiesContainer: {
     paddingHorizontal: 12,
-    marginTop: 16,
+    marginTop: 8,
+    backgroundColor: '#FBFCF8',
+    paddingBottom: 8,
+    borderBottomLeftRadius: 5,
+    borderBottomRightRadius: 5,
+  },
+  dietSection: {
+    marginBottom: 8,
+    backgroundColor: "#FBFCF8",
+    borderRadius: 5,
+    overflow: 'hidden',
   },
   selectedAllergiesTitle: {
     fontSize: 16,
@@ -672,7 +764,6 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     maxHeight: '85%',
   },
-
   modalContent: {
     width: "100%",
     backgroundColor: "#002F38",
@@ -824,69 +915,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'IstokWeb-Regular',
   },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    borderWidth: 1,
-    borderColor: '#2D2F2F',
-    borderRadius: 8,
-    marginHorizontal: 20,
-    marginTop: 16,
-    paddingHorizontal: 12,
-  },
-  searchIcon: {
-    marginRight: 8,
-    color: "#1D1F1F",
-  },
-  searchInput: {
-    flex: 1,
-    height: 40,
-    color: '#1D1F1F',
-    fontSize: 14,
-    fontFamily: 'IstokWeb-Regular',
-  },
-  clearSearch: {
-    padding: 4,
-  },
-  noResultsContainer: {
-    padding: 16,
-    alignItems: 'center',
-  },
-  noResultsText: {
-    color: '#1D1F1F',
-    fontFamily: 'IstokWeb-Regular',
-    fontSize: 14,
-  },
-
   allowanceInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 10,
     marginBottom: 15,
     paddingHorizontal: 10,
-  },
-  allowanceInput: {
-    flex: 1,
-    backgroundColor: '#FBFCF8',
-    borderWidth: 1,
-    borderColor: '#ECF0F1',
-    borderRadius: 5,
-    padding: 12,
-    marginRight: 10,
-    color: '#34495E',
-    fontFamily: 'IstokWeb-Regular',
-  },
-  saveAllowanceButton: {
-    backgroundColor: '#FE7F2D',
-    borderRadius: 5,
-    paddingVertical: 12,
-    paddingHorizontal: 15,
-  },
-  saveAllowanceButtonText: {
-    color: 'white',
-    fontFamily: 'IstokWeb-Regular',
-    fontWeight: 'bold',
   },
 });
 

@@ -240,7 +240,7 @@ const BudgetScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#00272B', // Keeping the original background color
+    backgroundColor: '#00272B',
     paddingTop: 20,
   },
   logo: {
@@ -254,7 +254,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 100,
   },
-  // Allowance Card
   allowanceCard: {
     backgroundColor: '#003B46',
     borderRadius: 12,
@@ -268,13 +267,13 @@ const styles = StyleSheet.create({
   },
   allowanceInfoText: {
     color: '#E0FF4F',
-    fontSize: 16, // Within 14-16px range
+    fontSize: 16,
     textAlign: 'center',
     fontWeight: '500',
   },
   allowanceAmountText: {
     color: 'white',
-    fontSize: 24, // Kept larger for emphasis
+    fontSize: 24,
     fontWeight: 'bold',
     textAlign: 'center',
     marginVertical: 8,
@@ -290,15 +289,14 @@ const styles = StyleSheet.create({
   },
   availableAllowanceLabel: {
     color: '#E0FF4F',
-    fontSize: 14, // Within 14-16px range
+    fontSize: 14,
     fontWeight: '500',
   },
   availableAllowanceValue: {
     color: 'white',
-    fontSize: 16, // Within 14-16px range
+    fontSize: 16,
     fontWeight: 'bold',
   },
-  // Section Cards
   sectionCard: {
     backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 12,
@@ -317,10 +315,9 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: 'white',
-    fontSize: 16, // Within 14-16px range
+    fontSize: 16,
     fontWeight: '600',
   },
-  // Expense Input Styling
   expenseItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -337,13 +334,13 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   expenseLabel: {
-    fontSize: 14, // Within 14-16px range
+    fontSize: 14,
     color: '#444',
     fontWeight: '500',
   },
   expenseAmountInput: {
     flex: 1,
-    fontSize: 15, // Within 14-16px range
+    fontSize: 15,
     color: '#222',
     height: 48,
     padding: 8,
@@ -354,14 +351,13 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     height: 48,
-    fontSize: 15, // Within 14-16px range
+    fontSize: 15,
     color: '#222',
   },
   removeButton: {
     padding: 8,
     marginLeft: 8,
   },
-  // Buttons
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -391,7 +387,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: 'white',
     fontWeight: '600',
-    fontSize: 14, // Within 14-16px range
+    fontSize: 14,
   },
   resetButton: {
     backgroundColor: '#FF6B6B',
@@ -403,9 +399,8 @@ const styles = StyleSheet.create({
   resetButtonText: {
     color: 'white',
     fontWeight: '600',
-    fontSize: 14, // Within 14-16px range
+    fontSize: 14,
   },
-  // History Styling
   historyWrapper: {
     backgroundColor: 'rgba(255,255,255,0.9)',
     borderRadius: 8,
@@ -427,16 +422,16 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   historyAmount: {
-    fontSize: 16, // Within 14-16px range
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#FE7F2D',
   },
   historyDate: {
-    fontSize: 14, // Within 14-16px range
+    fontSize: 14,
     color: '#666',
   },
   historyDesc: {
-    fontSize: 14, // Within 14-16px range
+    fontSize: 14,
     color: '#444',
   },
   emptyHistory: {
@@ -444,9 +439,8 @@ const styles = StyleSheet.create({
     padding: 20,
     color: '#888',
     fontStyle: 'italic',
-    fontSize: 14, // Within 14-16px range
+    fontSize: 14,
   },
-  // Navigation - kept exactly the same, but updated font size
   navContainer: { 
     position: 'absolute', 
     bottom: 0, 
@@ -470,7 +464,7 @@ const styles = StyleSheet.create({
     alignItems: 'center' 
   },
   navText: { 
-    fontSize: 14, // Updated from 12 to 14
+    fontSize: 14,
     marginTop: 5, 
     color: '#2E2E2E' 
   },

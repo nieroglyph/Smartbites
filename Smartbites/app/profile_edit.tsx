@@ -609,8 +609,6 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
   );
 };
 
-// ... (import statements remain the same)
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
