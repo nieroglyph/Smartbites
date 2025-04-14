@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "reac
 import * as Font from "expo-font";
 import { MaterialIcons, FontAwesome } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage"; // Store token locally
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const loadFonts = async () => {
   await Font.loadAsync({
@@ -36,7 +36,7 @@ const LoginScreen: React.FC = () => {
 
     setLoading(true);
     try {
-      const response = await fetch("http://192.168.254.111:8000/api/login/", {
+      const response = await fetch("http://192.168.1.9:8000/api/login/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -47,9 +47,9 @@ const LoginScreen: React.FC = () => {
       const data = await response.json();
 
       if (response.ok) {
-        await AsyncStorage.setItem("authToken", data.token); // Save token
+        await AsyncStorage.setItem("authToken", data.token);
         Alert.alert("Success", "Logged in successfully!");
-        router.push("/home"); // Redirect to home screen
+        router.push("/home");
       } else {
         Alert.alert("Login Failed", data.detail || "Invalid credentials");
       }
@@ -66,64 +66,82 @@ const LoginScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.welcomeText}>Welcome to</Text>
-      <Text style={styles.logo}>SmartBites</Text>
-
-      <Text style={styles.signInText}>Sign in</Text>
-
-      {/* Email Input */}
-      <View style={styles.inputContainer}>
-        <MaterialIcons name="email" size={20} color="#FFA500" style={styles.icon} />
-        <TextInput
-          style={styles.input}
-          placeholder="Email Address"
-          placeholderTextColor="#ccc"
-          value={email}
-          onChangeText={setEmail}
-        />
+      {/* Welcome Container at the top */}
+      <View style={styles.welcomeContainer}>
+        <Text style={styles.welcomeText}>Welcome to</Text>
+        <Text style={styles.logo}>SmartBites</Text>
       </View>
 
-      {/* Password Input */}
-      <View style={styles.inputContainer}>
-        <FontAwesome name="lock" size={20} color="#FFA500" style={styles.icon} />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor="#ccc"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
-      </View>
+      {/* Centered Form Container */}
+      <View style={styles.centerContainer}>
+        <View style={styles.formContainer}>
+          <Text style={styles.signInText}>Sign in</Text>
 
-      {/* Forgot Password */}
-      <TouchableOpacity onPress={() => router.push("/forgot_password_1")}>
-        <Text style={styles.forgotPassword}>Forgot Password?</Text>
-      </TouchableOpacity>
+          {/* Email Input */}
+          <View style={styles.inputContainer}>
+            <MaterialIcons name="email" size={20} color="#FFA500" style={styles.icon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Email Address"
+              placeholderTextColor="#999"
+              value={email}
+              onChangeText={setEmail}
+            />
+          </View>
 
-      {/* Login Button */}
-      <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={loading}>
-        <Text style={styles.loginText}>{loading ? "Logging in..." : "Log in"}</Text>
-      </TouchableOpacity>
+          {/* Password Input */}
+          <View style={styles.inputContainer}>
+            <FontAwesome name="lock" size={20} color="#FFA500" style={styles.icon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor="#999"
+              secureTextEntry
+              value={password}
+              onChangeText={setPassword}
+            />
+          </View>
 
-      {/* Signup Link */}
-      <View style={styles.signupContainer}>
-        <Text style={styles.signupText}>Don’t have an account? </Text>
-        <TouchableOpacity onPress={() => router.push("/sign_up")}>
-          <Text style={styles.signupLink}>Sign Up</Text>
-        </TouchableOpacity>
+          {/* Forgot Password */}
+          <TouchableOpacity onPress={() => router.push("/forgot_password_1")}>
+            <Text style={styles.forgotPassword}>Forgot Password?</Text>
+          </TouchableOpacity>
+
+          {/* Login Button */}
+          <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={loading}>
+            <Text style={styles.loginText}>{loading ? "Logging in..." : "Log in"}</Text>
+          </TouchableOpacity>
+
+          {/* Signup Link */}
+          <View style={styles.signupContainer}>
+            <Text style={styles.signupText}>Don't have an account? </Text>
+            <TouchableOpacity onPress={() => router.push("/sign_up")}>
+              <Text style={styles.signupLink}>Sign Up</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
     </View>
   );
 };
 
-// Styles remain unchanged...
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#00272B",
     paddingHorizontal: 20,
+  },
+  welcomeContainer: {
+    marginTop: 80,
+    alignItems: "center",
+  },
+  centerContainer: {
+    flex: 1,
     justifyContent: "center",
+    marginTop: -120, // Adjust this value to fine-tune the vertical position
+  },
+  formContainer: {
+    width: "100%",
   },
   welcomeText: {
     fontSize: 24,
@@ -136,10 +154,9 @@ const styles = StyleSheet.create({
     fontFamily: "IrishGrover-Regular",
     color: "#FE7F2D",
     textAlign: "center",
-    marginBottom: 30,
   },
   signInText: {
-    fontSize: 22,
+    fontSize: 16,
     color: "#FBFCF8",
     marginBottom: 10,
     fontFamily: "IstokWeb-Bold",
@@ -158,7 +175,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     height: 50,
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: "IstokWeb-Bold",
   },
   forgotPassword: {
@@ -166,6 +183,7 @@ const styles = StyleSheet.create({
     textAlign: "right",
     marginBottom: 20,
     fontFamily: "IstokWeb-Bold",
+    fontSize: 14,
   },
   loginButton: {
     backgroundColor: "#FE7F2D",
@@ -174,7 +192,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   loginText: {
-    fontSize: 18,
+    fontSize: 16,
     color: "#FFF",
     fontWeight: "bold",
     fontFamily: "IstokWeb-Bold",
@@ -187,11 +205,13 @@ const styles = StyleSheet.create({
   signupText: {
     color: "#FBFCF8",
     fontFamily: "IstokWeb-Bold",
+    fontSize: 14,
   },
   signupLink: {
     color: "#E0FF4F",
     fontWeight: "bold",
     fontFamily: "IstokWeb-Bold",
+    fontSize: 14,
   },
 });
 
