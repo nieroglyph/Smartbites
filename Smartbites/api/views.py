@@ -212,16 +212,25 @@ def query_ollama(request):
         return Response({"error": str(e)}, status=500)
     
 # Get user data
+from .models import UserProfile
+
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def get_current_user(request):
-    """Get current user's basic info"""
-    user = request.user
-    return Response({
-        'email': user.email,
-        'full_name': user.full_name
-    })
+    try:
+        profile = UserProfile.objects.get(user=request.user)
+        return Response({
+            "full_name": request.user.full_name,
+            "email": request.user.email,
+            "profile_picture": "",  # or profile.profile_picture.url if you have it
+            "dietary_preference": profile.dietary_preference,
+            "allergies": profile.allergies,
+            "budget": profile.budget,
+        })
+    except UserProfile.DoesNotExist:
+        return Response({"error": "Profile not found"}, status=404)
+
 
 # Profile Edit
 from .serializers import UserSerializer
@@ -262,3 +271,30 @@ def change_password(request):
         
         return Response({'detail': 'Password updated successfully'})
     return Response(serializer.errors, status=400)
+
+# Update user profile
+from .models import UserProfile
+
+@api_view(['PATCH'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def update_user_profile(request):
+    try:
+        profile = UserProfile.objects.get(user=request.user)
+    except UserProfile.DoesNotExist:
+        return Response({'error': 'Profile not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Allow updating dietary_preference, allergies and budget
+    data = request.data
+
+    if 'dietary_preference' in data:
+        profile.dietary_preference = data['dietary_preference']
+    if 'allergies' in data:
+        profile.allergies = data['allergies']
+    if 'budget' in data:
+        profile.budget = data['budget']
+
+    profile.save()
+    from .serializers import UserProfileSerializer
+    serializer = UserProfileSerializer(profile)
+    return Response(serializer.data, status=status.HTTP_200_OK)

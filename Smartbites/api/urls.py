@@ -14,6 +14,8 @@ from .views import query_ollama
 from .views import get_current_user
 # edit account, change password
 from .views import update_profile, change_password
+# edit user profile
+from .views import update_user_profile
 
 urlpatterns = [
     path('register/', register_user, name='register'),
@@ -30,4 +32,5 @@ urlpatterns = [
     path('current-user/', get_current_user, name='current-user'),
     path('update-profile/', update_profile, name='update-profile'),
     path('change-password/', change_password, name='change-password'),
+    path('update-user-profile/', update_user_profile, name='update-user-profile'),
 ]

@@ -5,6 +5,9 @@ interface UserProfile {
   profilePicture: string | null;
   name: string;
   email: string;
+  dietary_preference?: string; // optional, if not always set
+  allergies?: string;          // stored as comma-separated string
+  budget?: number;             // number type for budget amount
 }
 
 const useUserProfile = () => {
@@ -14,7 +17,6 @@ const useUserProfile = () => {
     name: "Loading...",
     email: "Loading..."
   });
-
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,13 +48,16 @@ const useUserProfile = () => {
 
         const userData = await response.json();
         setProfile({
-          profilePicture: null, // Add actual profile picture logic if needed
+          profilePicture: userData.profile_picture || null,   // Adjust if your API returns a URL or similar
           name: userData.full_name || "No name set",
-          email: userData.email
+          email: userData.email,
+          dietary_preference: userData.dietary_preference,      // e.g. "vegan"
+          allergies: userData.allergies,                        // e.g. "peanuts, shellfish"
+          budget: userData.budget,                              // e.g. 100.00
         });
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-        setError(error instanceof Error ? error.message : "Unknown error");
+      } catch (err) {
+        console.error("Error fetching user data:", err);
+        setError(err instanceof Error ? err.message : "Unknown error");
       } finally {
         setLoading(false);
       }

@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     fontFamily: 'IstokWeb-Regular',
   },
-  accountNumber: {
+  userEmail: {
     fontSize: 14,
     color: "#7F8C8D",
     fontFamily: 'IstokWeb-Regular',

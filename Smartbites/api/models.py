@@ -47,6 +47,7 @@ class UserProfile(models.Model):
         ('omnivore', 'Omnivore'),
     ], default='omnivore')
     allergies = models.TextField(blank=True, null=True)
+    budget = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
 
     def __str__(self):
         return self.user.email  # Use email since username is removed

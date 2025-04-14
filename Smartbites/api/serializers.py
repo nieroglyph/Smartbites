@@ -1,10 +1,15 @@
 from rest_framework import serializers
 from .models import UserProfile
 
+# User Profiles
 class UserProfileSerializer(serializers.ModelSerializer):
+    full_name = serializers.CharField(source='user.full_name', read_only=True)
+    email = serializers.EmailField(source='user.email', read_only=True)
+
     class Meta:
         model = UserProfile
-        fields = '__all__'  # This includes all fields from UserProfile model
+        fields = ['full_name', 'email', 'dietary_preference', 'allergies', 'budget']
+
 
 # Recipes
 from .models import Recipe
@@ -14,7 +19,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         model = Recipe
         fields = ['id', 'title', 'ingredients', 'instructions', 'image_url', 'saved_at']
 
-# Profile edit
+# password edit
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from rest_framework.validators import UniqueValidator
