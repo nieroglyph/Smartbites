@@ -514,7 +514,7 @@ const [profile, setProfile] = useState<Profile>({
           >
             <MaterialCommunityIcons name="keyboard-return" size={24} color="#FE7F2D" />
           </TouchableOpacity>
-          <Text style={styles.title}>Edit Profile</Text>
+          <Text style={styles.title}></Text>
           <View style={styles.rightHeaderSpace} />
         </View>
         
@@ -686,8 +686,6 @@ const [profile, setProfile] = useState<Profile>({
   );
 };
 
-// ... (import statements remain the same)
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -709,7 +707,6 @@ const styles = StyleSheet.create({
     marginRight: 15,
   },
   title: {
-    fontSize: 20,
     fontWeight: 'bold',
     color: '#FBFCF8',
     flex: 1,
@@ -745,25 +742,25 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 13,
+    fontSize: 14,
   },
   inputContainer: {
-    marginBottom: 12,
+    marginBottom: 25,
     paddingHorizontal: 3,
   },
   label: {
-    marginBottom: 4,
+    marginBottom: 5,
     fontWeight: '600',
-    color: '#FBFCF8',
-    fontSize: 13,
+    color: '#FE7F2D',
+    fontSize: 14,
   },
   input: {
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 5,
     padding: 10,
-    fontSize: 13,
-    backgroundColor: '#FBFCF8',
+    fontSize: 14,
+    backgroundColor: 'rgba(255,255,255,0.9)',
     color: '#00272B',
     height: 40,
   },
@@ -772,7 +769,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: 'red',
-    fontSize: 12,
+    fontSize: 13,
     marginTop: 4,
   },
   fixedButtonContainer: {
@@ -783,8 +780,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#00272B',
     padding: 16,
     paddingBottom: 24,
-    borderTopWidth: 1,
-    borderTopColor: '#FE7F2D',
   },
   submitButton: {
     backgroundColor: '#FE7F2D',
@@ -795,7 +790,7 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: '#FBFCF8',
     fontWeight: '500',
-    fontSize: 13,
+    fontSize: 14,
   },
   bottomSpacer: {
     height: 60,
@@ -874,64 +869,66 @@ const styles = StyleSheet.create({
   changePasswordButtonText: {
     color: '#FE7F2D',
     fontWeight: '500',
-    fontSize: 13,
+    fontSize: 14,
   },
   blurView: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
   },
   animatedModalView: {
     width: '90%',
     maxWidth: 400,
   },
   modalView: {
-    backgroundColor: '#00272B',
+    backgroundColor: "#003B46",
     borderRadius: 10,
-    padding: 16,
-    width: '100%',
+    padding: 20,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 10,
     borderWidth: 1,
-    borderColor: '#FE7F2D',
+    borderColor: "#2D2F2F",
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 16,
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 30,
+    color: "#E0FF4F",
     textAlign: 'center',
-    color: '#FBFCF8',
+    fontFamily: 'IstokWeb-Regular',
   },
   modalButtonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 8,
+    marginTop: 16,
   },
   modalButton: {
-    borderRadius: 6,
-    padding: 12,
-    elevation: 2,
-    flex: 1,
-    marginHorizontal: 4,
+    borderRadius: 8,
+    padding: 14,
+    elevation: 0,
+    minWidth: 100,
     alignItems: 'center',
+    flex: 1,
   },
   modalButtonClose: {
-    backgroundColor: 'red',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#434545',
   },
   modalButtonSubmit: {
     backgroundColor: '#FE7F2D',
+    marginLeft: 3,
   },
   modalButtonText: {
-    color: 'white',
-    fontWeight: '500',
-    textAlign: 'center',
-    fontSize: 13,
+    fontWeight: '600',
+    fontSize: 14,
+    fontFamily: 'IstokWeb-Regular',
+    color: '#FFFFFF',
   },
   notificationContainer: {
     backgroundColor: '#f0f9f1',
@@ -949,7 +946,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     color: '#2a7f3a',
     fontWeight: '500',
-    fontSize: 13,
+    fontSize: 14,
   },
 });
 

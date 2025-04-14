@@ -12,7 +12,10 @@ import {
   Pressable,
   TouchableWithoutFeedback,
   Easing,
-  Keyboard
+  Keyboard,
+  Alert,
+  ToastAndroid,
+  Platform
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -48,15 +51,18 @@ const UserprofileScreen = () => {
   });
 
   const [selectedAllowance, setSelectedAllowance] = useState('Weekly');
+  const [allowanceAmount, setAllowanceAmount] = useState('');
   const [selectedDiet, setSelectedDiet] = useState('Vegan');
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
   const [newAllergy, setNewAllergy] = useState('');
   const [showAllergiesModal, setShowAllergiesModal] = useState(false);
   const [showAllowanceOptions, setShowAllowanceOptions] = useState(false);
   const [showDietOptions, setShowDietOptions] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(-50)).current;
   const allowanceRef = useRef<View>(null);
   const dietRef = useRef<View>(null);
 
@@ -65,13 +71,19 @@ const UserprofileScreen = () => {
       Animated.parallel([
         Animated.timing(scaleAnim, {
           toValue: 1,
-          duration: 200,
-          easing: Easing.out(Easing.cubic),
+          duration: 300,
+          easing: Easing.out(Easing.back(1.7)),
           useNativeDriver: true,
         }),
         Animated.timing(opacityAnim, {
           toValue: 1,
-          duration: 200,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 300,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
       ]).start();
@@ -79,17 +91,40 @@ const UserprofileScreen = () => {
       Animated.parallel([
         Animated.timing(scaleAnim, {
           toValue: 0.8,
-          duration: 150,
+          duration: 200,
           useNativeDriver: true,
         }),
         Animated.timing(opacityAnim, {
           toValue: 0,
-          duration: 150,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: -50,
+          duration: 200,
           useNativeDriver: true,
         }),
       ]).start();
     }
   }, [showAllergiesModal]);
+
+  // Load saved allowance data on component mount
+  useEffect(() => {
+    const loadAllowance = async () => {
+      try {
+        const savedAllowance = await AsyncStorage.getItem('userAllowance');
+        if (savedAllowance) {
+          const { frequency, amount } = JSON.parse(savedAllowance);
+          setSelectedAllowance(frequency);
+          setAllowanceAmount(amount);
+        }
+      } catch (error) {
+        console.error('Failed to load allowance', error);
+      }
+    };
+
+    loadAllowance();
+  }, []);
 
   // Handle taps outside dropdowns
   useEffect(() => {
@@ -117,13 +152,36 @@ const UserprofileScreen = () => {
     }
   }, [showAllowanceOptions, showDietOptions]);
 
-  if (!fontsLoaded) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3498DB" />
-      </View>
-    );
-  }
+  const showAlert = (message: string) => {
+    if (Platform.OS === 'android') {
+      ToastAndroid.show(message, ToastAndroid.SHORT);
+    } else {
+      Alert.alert('Invalid Input', message);
+    }
+  };
+
+  const handleNumericInput = (text: string, callback: (value: string) => void) => {
+    const numericText = text.replace(/[^0-9]/g, '');
+    if (text !== numericText) showAlert('Please enter numbers only.');
+    callback(numericText);
+  };
+
+  const saveAllowance = async () => {
+    if (!allowanceAmount) {
+      showAlert('Please enter an allowance amount');
+      return;
+    }
+
+    try {
+      await AsyncStorage.setItem('userAllowance', JSON.stringify({
+        frequency: selectedAllowance,
+        amount: allowanceAmount
+      }));
+      showAlert(`${selectedAllowance} allowance saved successfully!`);
+    } catch (error) {
+      showAlert('Failed to save allowance.');
+    }
+  };
 
   if (error) {
     return (
@@ -136,6 +194,10 @@ const UserprofileScreen = () => {
   const commonAllergies = [
     'Peanuts', 'Shellfish', 'Eggs', 'Milk', 'Wheat', 'Soy', 'Tree Nuts', 'Fish', 'Gluten', 'Sesame'
   ];
+
+  const filteredAllergies = commonAllergies.filter(allergy => 
+    allergy.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const allowanceOptions = ['Weekly', 'Monthly'];
   const dietOptions = ['Vegan', 'Keto', 'Vegetarian', 'Omnivore'];
@@ -150,6 +212,14 @@ const UserprofileScreen = () => {
       setNewAllergy('');
     }
   };
+
+  if (!fontsLoaded) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#3498DB" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.mainContainer}>
@@ -186,8 +256,8 @@ const UserprofileScreen = () => {
             </View>
 
             <View style={styles.settingsContainer}>
-              {/* Allowance Selection */}
-              <View ref={allowanceRef}>
+              {/* Allowance Section */}
+              <View ref={allowanceRef} style={styles.allowanceSection}>
                 <TouchableOpacity
                   style={styles.settingItem}
                   onPress={(e) => {
@@ -198,40 +268,70 @@ const UserprofileScreen = () => {
                   activeOpacity={0.7}
                 >
                   <MaterialCommunityIcons name="cash" size={18} color="#FE7F2D" />
-                  <Text style={styles.settingText}>Allowance: {selectedAllowance}</Text>
+                  <Text style={styles.settingText}>
+                    Allowance: {selectedAllowance} {allowanceAmount ? `(₱${allowanceAmount}.00)` : ''}
+                  </Text>
                   <Ionicons name={showAllowanceOptions ? "chevron-down" : "chevron-forward"} size={16} color="#FE7F2D" />
                 </TouchableOpacity>
 
                 {showAllowanceOptions && (
-                  <View style={styles.optionsContainer}>
-                    {allowanceOptions.map((option, index) => (
+                  <View style={styles.dropdownContainer}>
+                    <View style={styles.optionsContainer}>
+                      {allowanceOptions.map((option, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          style={[
+                            styles.optionItem,
+                            selectedAllowance === option && styles.selectedOption
+                          ]}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            setSelectedAllowance(option);
+                          }}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[
+                            styles.optionText,
+                            selectedAllowance === option && styles.selectedOptionText
+                          ]}>
+                            {option}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+
+                    {/* Integrated Allowance Input */}
+                    <View style={styles.allowanceInputWrapper}>
+                      <View style={styles.amountInputContainer}>
+                        <Text style={styles.amountInputLabel}>Amount</Text>
+                        <View style={styles.amountInputField}>
+                          <Text style={styles.currencySymbol}>₱</Text>
+                          <TextInput
+                            style={styles.allowanceInput}
+                            keyboardType="numeric"
+                            placeholder="0.00"
+                            value={allowanceAmount}
+                            onChangeText={text => handleNumericInput(text, setAllowanceAmount)}
+                            placeholderTextColor="#7F8C8D"
+                          />
+                        </View>
+                      </View>
                       <TouchableOpacity
-                        key={index}
-                        style={[
-                          styles.optionItem,
-                          selectedAllowance === option && styles.selectedOption
-                        ]}
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          setSelectedAllowance(option);
+                        style={styles.saveAllowanceButton}
+                        onPress={() => {
+                          saveAllowance();
                           setShowAllowanceOptions(false);
                         }}
-                        activeOpacity={0.7}
                       >
-                        <Text style={[
-                          styles.optionText,
-                          selectedAllowance === option && styles.selectedOptionText
-                        ]}>
-                          {option}
-                        </Text>
+                        <Text style={styles.saveAllowanceButtonText}>Save</Text>
                       </TouchableOpacity>
-                    ))}
+                    </View>
                   </View>
                 )}
               </View>
 
               {/* Dietary Preference Selection */}
-              <View ref={dietRef}>
+              <View ref={dietRef} style={styles.dietSection}>
                 <TouchableOpacity
                   style={styles.settingItem}
                   onPress={(e) => {
@@ -247,13 +347,14 @@ const UserprofileScreen = () => {
                 </TouchableOpacity>
 
                 {showDietOptions && (
-                  <View style={styles.optionsContainer}>
+                  <View style={[styles.optionsContainer, styles.dietOptionsContainer]}>
                     {dietOptions.map((option, index) => (
                       <TouchableOpacity
                         key={index}
                         style={[
                           styles.optionItem,
-                          selectedDiet === option && styles.selectedOption
+                          selectedDiet === option && styles.selectedOption,
+                          index === dietOptions.length - 1 && styles.lastOptionItem
                         ]}
                         onPress={(e) => {
                           e.stopPropagation();
@@ -277,7 +378,10 @@ const UserprofileScreen = () => {
               {/* Allergies */}
               <TouchableOpacity
                 style={styles.settingItem}
-                onPress={() => setShowAllergiesModal(true)}
+                onPress={() => {
+                  setShowAllergiesModal(true);
+                  setSearchQuery('');
+                }}
                 activeOpacity={0.7}
               >
                 <MaterialCommunityIcons name="allergy" size={18} color="#FE7F2D" />
@@ -315,14 +419,14 @@ const UserprofileScreen = () => {
       
       <Modal
         visible={showAllergiesModal}
-        animationType="fade"
+        animationType="none"
         transparent={true}
         onRequestClose={() => setShowAllergiesModal(false)}
       >
         <TouchableWithoutFeedback onPress={() => setShowAllergiesModal(false)}>
           <BlurView
             style={styles.blurView}
-            intensity={20}
+            intensity={50}
             tint="dark"
           >
             <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
@@ -330,53 +434,81 @@ const UserprofileScreen = () => {
                 style={[
                   styles.animatedModalView,
                   {
-                    transform: [{ scale: scaleAnim }],
+                    transform: [
+                      { scale: scaleAnim },
+                      { translateY: slideAnim }
+                    ],
                     opacity: opacityAnim,
                   }
                 ]}
               >
                 <View style={styles.modalContent}>
-                  <Text style={styles.modalTitle}>Select Allergies</Text>
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Dietary Restrictions</Text>
+                  </View>
                   
-                  {commonAllergies.map((allergy, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      style={[ 
-                        styles.allergyItem,
-                        selectedAllergies.includes(allergy) && styles.selectedAllergy,
-                      ]}
-                      onPress={() => {
-                        if (selectedAllergies.includes(allergy)) {
-                          setSelectedAllergies(selectedAllergies.filter(item => item !== allergy));
-                        } else {
-                          setSelectedAllergies([...selectedAllergies, allergy]);
-                        }
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[styles.allergyText, selectedAllergies.includes(allergy) && styles.selectedAllergyText]}>{allergy}</Text>
-                    </TouchableOpacity>
-                  ))}
+                  <Text style={styles.modalSubtitle}>Common Food Allergens</Text>
+                  
+                  <ScrollView style={styles.allergyList}>
+                    {commonAllergies.map((allergy, index) => (
+                      <TouchableOpacity
+                        key={index}
+                        style={[ 
+                          styles.allergyItem,
+                          selectedAllergies.includes(allergy) && styles.selectedAllergy,
+                          index === commonAllergies.length - 1 && styles.lastAllergyItem
+                        ]}
+                        onPress={() => {
+                          if (selectedAllergies.includes(allergy)) {
+                            setSelectedAllergies(selectedAllergies.filter(item => item !== allergy));
+                          } else {
+                            setSelectedAllergies([...selectedAllergies, allergy]);
+                          }
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[
+                          styles.allergyItemText, 
+                          selectedAllergies.includes(allergy) && styles.selectedAllergyText
+                        ]}>
+                          {allergy}
+                        </Text>
+                        {selectedAllergies.includes(allergy) && (
+                          <View style={styles.checkmarkContainer}>
+                            <Ionicons name="checkmark-circle" size={20} color="#FE7F2D" />
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                  
+                  <View style={styles.divider} />
+                  
+                  <Text style={styles.customAllergyTitle}>Add Food Allergen</Text>
                   
                   <View style={styles.addAllergyContainer}>
                     <TextInput
                       style={styles.inputAllergy}
                       value={newAllergy}
                       onChangeText={setNewAllergy}
-                      placeholder="Add custom allergy"
+                      placeholder="Type allergen name"
                       placeholderTextColor="#7F8C8D"
                     />
                     <TouchableOpacity
-                      style={styles.addButton}
+                      style={[
+                        styles.addButton,
+                        !newAllergy && styles.addButtonDisabled
+                      ]}
                       onPress={handleAddAllergy}
+                      disabled={!newAllergy}
                     >
-                      <Ionicons name="add" size={20} color="#FE7F2D" />
+                      <Text style={styles.addButtonText}>Add</Text>
                     </TouchableOpacity>
                   </View>
 
                   <View style={styles.modalButtonContainer}>
                     <Pressable
-                      style={[styles.modalButton, styles.modalButtonClose]}
+                      style={styles.modalButtonSave}
                       onPress={() => setShowAllergiesModal(false)}
                     >
                       <Text style={styles.modalButtonText}>Close</Text>
@@ -456,14 +588,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   userName: {
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: "600",
     color: "#2C3E50",
     marginBottom: 4,
     fontFamily: 'IstokWeb-Regular',
   },
-  userEmail: {
-    fontSize: 13,
+  accountNumber: {
+    fontSize: 14,
     color: "#7F8C8D",
     fontFamily: 'IstokWeb-Regular',
   },
@@ -471,52 +603,131 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingHorizontal: 3,
   },
-  settingItem: {
+  allowanceSection: {
+    marginBottom: 8,
+    backgroundColor: "#FBFCF8",
     borderRadius: 5,
-    marginBottom: 4,
+    overflow: 'hidden',
+  },
+  dropdownContainer: {
+    backgroundColor: '#FBFCF8',
+  },
+  settingItem: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FBFCF8",
     padding: 14,
     borderBottomWidth: 1,
+    borderRadius: 5,
     borderBottomColor: "#ECF0F1",
     height: 50,
   },
   settingText: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 16,
     marginLeft: 12,
     color: "#34495E",
     fontFamily: 'IstokWeb-Regular',
   },
   optionsContainer: {
     backgroundColor: '#FBFCF8',
-    borderRadius: 5,
-    marginBottom: 8,
     padding: 8,
+  },
+  dietOptionsContainer: {
+    borderBottomLeftRadius: 5,
+    borderBottomRightRadius: 5,
+    overflow: 'hidden',
   },
   optionItem: {
     paddingVertical: 10,
     paddingHorizontal: 12,
+  },
+  lastOptionItem: {
+    borderBottomLeftRadius: 4,
+    borderBottomRightRadius: 4,
   },
   selectedOption: {
     backgroundColor: '#FE7F2D',
     borderRadius: 4,
   },
   optionText: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#34495E',
     fontFamily: 'IstokWeb-Regular',
   },
   selectedOptionText: {
     color: '#fff',
   },
+  allowanceInputWrapper: {
+    backgroundColor: "#FBFCF8",
+    padding: 15,
+    borderBottomLeftRadius: 5,
+    borderBottomRightRadius: 5,
+  },
+  amountInputContainer: {
+    borderTopWidth: 1,
+    borderColor: "#FE7F2D",
+    marginBottom: 12,
+  },
+  amountInputLabel: {
+    fontSize: 16,
+    color: "#34495E",
+    marginBottom: 6,
+    fontFamily: 'IstokWeb-Regular',
+    fontWeight: "700",
+    paddingTop: 8,
+  },
+  amountInputField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: "#ECF0F1",
+    borderRadius: 5,
+    height: 46,
+  },
+  currencySymbol: {
+    fontSize: 16,
+    color: "#34495E",
+    paddingHorizontal: 12,
+    fontFamily: 'IstokWeb-Regular',
+  },
+  allowanceInput: {
+    flex: 1,
+    height: '100%',
+    color: '#34495E',
+    fontSize: 16,
+    fontFamily: 'IstokWeb-Regular',
+  },
+  saveAllowanceButton: {
+    backgroundColor: '#FE7F2D',
+    borderRadius: 5,
+    height: 46,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  saveAllowanceButtonText: {
+    color: 'white',
+    fontFamily: 'IstokWeb-Regular',
+    fontSize: 16,
+    fontWeight: "600",
+  },
   selectedAllergiesContainer: {
     paddingHorizontal: 12,
-    marginTop: 16,
+    marginTop: 8,
+    backgroundColor: '#FBFCF8',
+    paddingBottom: 8,
+    borderBottomLeftRadius: 5,
+    borderBottomRightRadius: 5,
+  },
+  dietSection: {
+    marginBottom: 8,
+    backgroundColor: "#FBFCF8",
+    borderRadius: 5,
+    overflow: 'hidden',
   },
   selectedAllergiesTitle: {
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: '600',
     color: '#FE7F2D',
     fontFamily: 'IstokWeb-Regular',
@@ -548,91 +759,178 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   allergyText: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#fff',
     fontFamily: 'IstokWeb-Regular',
-  },
-  selectedAllergyText: {
-    color: '#000',
   },
   blurView: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
   },
   animatedModalView: {
     width: '90%',
     maxWidth: 400,
+    maxHeight: '85%',
   },
   modalContent: {
     width: "100%",
-    backgroundColor: "#00272B",
-    padding: 16,
-    borderRadius: 10,
+    backgroundColor: "#002F38",
+    borderRadius: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 10,
     borderWidth: 1,
-    borderColor: '#FE7F2D',
+    borderColor: "#2D2F2F",
+    overflow: 'hidden',
+  },
+  modalHeader: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomColor: "#2D2F2F",
   },
   modalTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 8,
-    color: "#FE7F2D",
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#E0FF4F",
+    fontFamily: 'IstokWeb-Regular',
     textAlign: 'center',
+  },
+  modalCloseButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#434545',
+  },
+  modalSubtitle: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#FE7F2D",
+    marginTop: 16,
+    marginBottom: 8,
+    paddingHorizontal: 20,
     fontFamily: 'IstokWeb-Regular',
   },
+  allergyList: {
+    maxHeight: 220,
+    paddingHorizontal: 20,
+  },
   allergyItem: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ECF0F1",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginBottom: 6,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderWidth: 1,
+    borderColor: '#2D2F2F',
+  },
+  lastAllergyItem: {
+    marginBottom: 0,
+  },
+  allergyItemText: {
+    fontSize: 16,
+    color: "#1D1F1F",
+    fontFamily: 'IstokWeb-Regular',
   },
   selectedAllergy: {
-    backgroundColor: "#FE7F2D",
-    borderRadius: 4,
+    backgroundColor: "#003B46",
+    borderColor: '#003B46',
   },
-  inputAllergy: {
-    flex: 1,
-    borderBottomWidth: 1,
-    borderBottomColor: "#7F8C8D",
-    marginTop: 8,
-    padding: 8,
-    fontSize: 13,
-    color: "#fff",
+  selectedAllergyText: {
+    color: "rgba(255,255,255,0.9)",
+    fontWeight: '600',
+  },
+  checkmarkContainer: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  divider: {
+    height: 1,
+    marginVertical: 16,
+    marginHorizontal: 20,
+  },
+  customAllergyTitle: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#FE7F2D",
+    marginBottom: 12,
+    paddingHorizontal: 20,
     fontFamily: 'IstokWeb-Regular',
   },
   addAllergyContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  inputAllergy: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderWidth: 1,
+    borderColor: "#2D2F2F",
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    color: "#1D1F1F",
+    fontFamily: 'IstokWeb-Regular',
   },
   addButton: {
-    marginLeft: 8,
-  },
-  modalButtonContainer: {
-    flexDirection: 'row',
+    marginLeft: 10,
+    backgroundColor: '#FE7F2D',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     justifyContent: 'center',
-    marginTop: 16,
-  },
-  modalButton: {
-    borderRadius: 6,
-    padding: 12,
-    elevation: 2,
-    minWidth: 100,
     alignItems: 'center',
   },
-  modalButtonClose: {
+  addButtonDisabled: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  addButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 14,
+    fontFamily: 'IstokWeb-Regular',
+  },
+  modalButtonContainer: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#2D2F2F',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalButtonSave: {
     backgroundColor: '#FE7F2D',
+    borderRadius: 8,
+    padding: 14,
+    alignItems: 'center',
+    flex: 1,
   },
   modalButtonText: {
-    color: '#fff',
-    fontWeight: '500',
-    fontSize: 13,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 14,
     fontFamily: 'IstokWeb-Regular',
+  },
+  allowanceInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 15,
+    paddingHorizontal: 10,
   },
 });
 

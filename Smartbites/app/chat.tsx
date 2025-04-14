@@ -135,6 +135,7 @@ const ChatScreen = () => {
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
   const [inputHeight, setInputHeight] = useState(16);
   const [isAIResponding, setIsAIResponding] = useState(false);
+  const responseInterval = useRef<NodeJS.Timeout | null>(null);
   
   const [cameraPermission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
@@ -144,6 +145,47 @@ const ChatScreen = () => {
     'IstokWeb-Regular': require('../assets/fonts/IstokWeb-Regular.ttf'),
   });
 
+  const clearChat = () => {
+    Alert.alert(
+      "Clear Chat",
+      "Are you sure you want to clear all messages?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        { 
+          text: "Clear", 
+          onPress: () => {
+            // Clear any ongoing response interval
+            if (responseInterval.current) {
+              clearInterval(responseInterval.current);
+              responseInterval.current = null;
+            }
+            // Stop AI response
+            setIsAIResponding(false);
+            // Reset to initial state
+            setMessages([{
+              id: 1,
+              text: "Hello! I'm your SmartBites assistant. How can I help you today?",
+              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              isUser: false
+            }]);
+          }
+        }
+      ]
+    );
+  };
+
+  useEffect(() => {
+    return () => {
+      // Clean up interval when component unmounts
+      if (responseInterval.current) {
+        clearInterval(responseInterval.current);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     (async () => {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -151,7 +193,6 @@ const ChatScreen = () => {
         Alert.alert('Permission required', 'We need access to your media library to attach images');
       }
 
-      // Request camera permission when component mounts
       if (!cameraPermission) {
         const { granted } = await requestPermission();
         if (!granted) {
@@ -283,7 +324,8 @@ const ChatScreen = () => {
           prev.map(msg => (msg.id === thinkingMessage.id ? { ...msg, text: '' } : msg))
         );
   
-        const interval = setInterval(() => {
+        // Store interval reference
+        responseInterval.current = setInterval(() => {
           if (index < fullResponse.length) {
             currentText += fullResponse[index];
             index++;
@@ -294,7 +336,10 @@ const ChatScreen = () => {
               )
             );
           } else {
-            clearInterval(interval);
+            if (responseInterval.current) {
+              clearInterval(responseInterval.current);
+              responseInterval.current = null;
+            }
             setIsAIResponding(false);
           }
         }, 30);
@@ -303,6 +348,10 @@ const ChatScreen = () => {
         console.error('Error fetching AI response:', error);
         Alert.alert('Error', 'Failed to communicate with AI.');
         setIsAIResponding(false);
+        if (responseInterval.current) {
+          clearInterval(responseInterval.current);
+          responseInterval.current = null;
+        }
       }
     }
   };
@@ -497,13 +546,17 @@ const ChatScreen = () => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      {/* Header with logo and clear chat button */}
+      <View style={styles.logoContainer}>
         <Image
           source={require('../assets/images/logo/smartbites-high-resolution-logo-transparent.png')}
           style={styles.logo}
         />
-        <TouchableOpacity style={styles.settingsButton}>
-          <MaterialCommunityIcons name="dots-vertical" size={24} color="#FE7F2D" />
+        <TouchableOpacity 
+          style={styles.clearButton}
+          onPress={clearChat}
+        >
+          <Icon name="delete" size={24} color="#FE7F2D" />
         </TouchableOpacity>
       </View>
 
@@ -663,21 +716,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#00272B',
     paddingTop: 20,
   },
-  header: {
+  logoContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    marginBottom: 10,
   },
   logo: {
     width: 120,
     height: 50,
     resizeMode: 'contain',
   },
-  settingsButton: {
+  clearButton: {
     padding: 8,
   },
   chatArea: {
@@ -724,7 +775,7 @@ const styles = StyleSheet.create({
   },
   messageTime: {
     color: 'rgba(255, 255, 255, 0.6)',
-    fontSize: 11,
+    fontSize: 12,
     marginTop: 4,
     alignSelf: 'flex-end',
   },
@@ -740,7 +791,7 @@ const styles = StyleSheet.create({
   },
   inputWrapper: {
     position: 'absolute',
-    bottom: 60,
+    bottom: 70,
     left: 0,
     right: 0,
     backgroundColor: '#00272B',
