@@ -169,19 +169,42 @@ def recipe_search(request):
     return Response(recipes)
 
 # ollama - biteai
-import requests
-import json
-import base64
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from django.core.files.base import ContentFile
+from rest_framework import status
+from .models import UserProfile
+import requests, json, base64
 
 @api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
 def query_ollama(request):
-    """API to send a request to Ollama and return a response."""
+    """
+    Retrieves the current user's profile details and combines them with the query.
+    Sends the combined prompt to Ollama and returns the model's response.
+    """
     try:
         user_prompt = request.data.get("prompt", "Hello, Ollama!")
         image_file = request.FILES.get("image", None)
+
+        try:
+            profile = UserProfile.objects.get(user=request.user)
+        except UserProfile.DoesNotExist:
+            profile = None
+
+        profile_info_parts = []
+        if profile:
+            if profile.dietary_preference:
+                profile_info_parts.append(f"Diet: {profile.dietary_preference}")
+            if profile.allergies:
+                profile_info_parts.append(f"Allergies: {profile.allergies}")
+            if profile.budget is not None:
+                profile_info_parts.append(f"Budget: ₱{profile.budget}")
+        profile_info = ". ".join(profile_info_parts)
+
+        full_prompt = f"{profile_info}. {user_prompt}" if profile_info else user_prompt
 
         if image_file:
             image_content = image_file.read()
@@ -191,23 +214,19 @@ def query_ollama(request):
 
         ollama_payload = {
             "model": "biteai",
-            "prompt": user_prompt,
+            "prompt": full_prompt,
         }
-
         if encoded_image:
             ollama_payload["images"] = [encoded_image]
 
         response = requests.post("http://127.0.0.1:11434/api/generate", json=ollama_payload)
         response_jsons = [json.loads(line) for line in response.text.split("\n") if line.strip()]
-
         final_response = "".join(entry["response"] for entry in response_jsons)
 
-        # Preserve newlines and formatting instead of splitting
-        cleaned_response = final_response.replace('\n\n', '\n')  # Normalize line breaks
-        cleaned_response = cleaned_response.strip()
+        cleaned_response = final_response.replace('\n\n', '\n').strip()
 
         return Response({"response": cleaned_response}, status=response.status_code)
-
+    
     except Exception as e:
         return Response({"error": str(e)}, status=500)
     
