@@ -101,15 +101,30 @@ from .serializers import RecipeSerializer
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def save_recipe(request):
-    """Save a new recipe for the logged-in user."""
-    data = request.data.copy()  # Make a copy of the request data
-    data['user'] = request.user.id  # Assign the logged-in user to the recipe
-
-    serializer = RecipeSerializer(data=data)
-    if serializer.is_valid():
-        serializer.save(user=request.user)
+    try:
+        data = request.data
+        title = data.get('title', '')
+        ingredients = data.get('ingredients', '')
+        instructions = data.get('instructions', '')
+        cost = data.get('cost', None)
+        
+        if not title or not ingredients or not instructions:
+            return Response({"error": "Title, ingredients, and instructions are required."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        
+        recipe = Recipe.objects.create(
+            user=request.user,
+            title=title,
+            ingredients=ingredients,
+            instructions=instructions,
+            cost=cost
+        )
+        
+        serializer = RecipeSerializer(recipe)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])
@@ -169,11 +184,6 @@ def recipe_search(request):
     return Response(recipes)
 
 # ollama - biteai
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
-from rest_framework.authentication import TokenAuthentication
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework import status
 from .models import UserProfile
 import requests, json, base64
 
