@@ -79,7 +79,11 @@ const SignupScreen = () => {
     if (validateFields()) {
       setIsLoading(true);
       try {
+<<<<<<< HEAD
         const response = await fetch("http://192.168.254.111:8000/api/register/", {
+=======
+        const response = await fetch("http://192.168.100.10:8000/api/register/", {  // Replace with your backend IP
+>>>>>>> 34cb7c5cbe3363c2d7dacd7434c833b121b8a3cc
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

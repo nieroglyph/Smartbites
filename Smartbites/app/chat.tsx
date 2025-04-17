@@ -19,6 +19,7 @@ import { useFonts } from 'expo-font';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { CameraView, useCameraPermissions, CameraType } from 'expo-camera';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 interface Message {
   id: number;
@@ -123,7 +124,7 @@ const ChatScreen = () => {
     {
       id: 1,
       text: "Hello! I'm your SmartBites assistant. How can I help you today?",
-      time: "10:30 AM",
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       isUser: false
     }
   ]);
@@ -305,10 +306,17 @@ const ChatScreen = () => {
             name: filename
           } as any);
         }
-  
+        
+        const token = await AsyncStorage.getItem("authToken");
+        if (!token) {
+          Alert.alert("Error", "Not authenticated");
+          return false;
+        }
         const response = await fetch('http://192.168.100.10:8000/api/query-ollama/', {
           method: 'POST',
-          headers: { 'Content-Type': 'multipart/form-data' },
+          headers: { 'Content-Type': 'multipart/form-data',
+                     'Authorization': `Token ${token}`
+           },
           body: formData
         });
   
@@ -355,6 +363,92 @@ const ChatScreen = () => {
       }
     }
   };
+
+  const saveRecipe = async (recipeData: {
+    title: string;
+    ingredients: string;
+    instructions: string;
+    cost?: number | null;
+  }): Promise<boolean> => {
+    try {
+      const token = await AsyncStorage.getItem("authToken");
+      if (!token) {
+        Alert.alert("Error", "Not authenticated");
+        return false;
+      }
+      const response = await fetch("http://192.168.100.10:8000/api/save-recipe/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Token ${token}`,
+        },
+        body: JSON.stringify(recipeData),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to save recipe");
+      }
+      return true;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      Alert.alert("Error", errorMessage);
+      return false;
+    }
+  };  
+
+  function parseRecipe(responseText: string): {
+    title: string;
+    ingredients: string;
+    instructions: string;
+    cost: number | null;
+  } {
+    let title = "Untitled Recipe";
+    let ingredients = "";
+    let instructions = "";
+    let cost: number | null = null;
+  
+    const titleMatch = responseText.match(/\*\*Title:\*\*\s*(.+)/i);
+    if (titleMatch) {
+      title = titleMatch[1].trim();
+    }
+  
+    const ingredientsSplit = responseText.split("**Ingredients:**");
+    if (ingredientsSplit.length > 1) {
+      const ingAndAfter = ingredientsSplit[1];
+      const instructionsSplit = ingAndAfter.split("**Instructions:**");
+      ingredients = instructionsSplit[0].trim();
+  
+      if (instructionsSplit.length > 1) {
+        let instructionsSection = instructionsSplit[1].trim();
+  
+        const costMatch = instructionsSection.match(/\*\*Total Estimated Price:\*\*\s*₱([\d,\.]+)/i);
+        if (costMatch) {
+          cost = parseFloat(costMatch[1].replace(/,/g, ''));
+          instructionsSection = instructionsSection.replace(costMatch[0], "").trim();
+        }
+        instructions = instructionsSection;
+      }
+    }
+  
+    return { title, ingredients, instructions, cost };
+  }  
+
+  const handleSaveRecipe = async (recipeMsg: Message) => {
+    // Parse the AI response to extract structured recipe info.
+    const { title, ingredients, instructions, cost } = parseRecipe(recipeMsg.text);
+    
+    const recipeData = {
+      title,
+      ingredients,
+      instructions,
+      cost, 
+    };
+    
+    const success = await saveRecipe(recipeData);
+    if (success) {
+      Alert.alert("Success", "Recipe saved successfully!");
+    }
+  };  
   
   const pickImage = async (source: 'gallery' | 'camera') => {
     if (isAIResponding) return;
@@ -561,30 +655,30 @@ const ChatScreen = () => {
       </View>
 
       <View style={styles.chatArea}>
-        <ScrollView 
-          ref={scrollViewRef}
-          style={styles.chatContent}
-          contentContainerStyle={styles.chatContentContainer}
-          onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
-        >
-          {messages.map((msg) => (
-            <View 
-              key={msg.id} 
-              style={[
-                msg.isUser ? styles.userMessageContainer : styles.aiMessageContainer,
-                { marginBottom: 16 }
-              ]}
-            >
-              <View style={msg.isUser ? styles.userMessage : styles.aiMessage}>
-                {msg.image && (
-                  <Image 
-                    source={{ uri: msg.image }} 
-                    style={styles.messageImage}
-                    resizeMode="cover"
-                    onError={(e) => console.log('Image load error:', e.nativeEvent.error)}
-                  />
-                )}
-                {msg.text === '###THINKING_ANIMATION###' ? (
+      <ScrollView 
+        ref={scrollViewRef}
+        style={styles.chatContent}
+        contentContainerStyle={styles.chatContentContainer}
+        onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+      >
+        {messages.map((msg) => (
+          <View 
+            key={msg.id} 
+            style={[
+              msg.isUser ? styles.userMessageContainer : styles.aiMessageContainer,
+              { marginBottom: 16 }
+            ]}
+          >
+            <View style={msg.isUser ? styles.userMessage : styles.aiMessage}>
+              {msg.image && (
+                <Image 
+                  source={{ uri: msg.image }} 
+                  style={styles.messageImage}
+                  resizeMode="cover"
+                  onError={(e) => console.log('Image load error:', e.nativeEvent.error)}
+                />
+              )}
+              {msg.text === '###THINKING_ANIMATION###' ? (
                   <View style={styles.thinkingMessageContainer}>
                     <ThinkingDots />
                   </View>
@@ -593,11 +687,21 @@ const ChatScreen = () => {
                     <FormattedText text={msg.text} />
                   </Text>
                 ) : null}
-                <Text style={[styles.messageTime, styles.defaultFont]}>{msg.time}</Text>
-              </View>
+              <Text style={[styles.messageTime, styles.defaultFont]}>{msg.time}</Text>
+              {/* If this is an AI message, show an inline Save Recipe button */}
+              {!msg.isUser && (
+                <TouchableOpacity 
+                  style={styles.saveRecipeInlineButton} 
+                  onPress={() => handleSaveRecipe(msg)}
+                >
+                  <Text style={styles.saveRecipeInlineButtonText}>Save Recipe</Text>
+                </TouchableOpacity>
+              )}
             </View>
-          ))}
-        </ScrollView>
+          </View>
+        ))}
+      </ScrollView>
+
       </View>
 
       {photoPreview && (
@@ -1027,6 +1131,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#FE7F2D',
     marginHorizontal: 2,
   },
+  saveRecipeInlineButton: {
+    marginTop: 8,
+    alignSelf: 'flex-end',
+    backgroundColor: '#FE7F2D',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+  },
+  saveRecipeInlineButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontFamily: 'IstokWeb-Regular',
+  }
 });
 
 export default ChatScreen;

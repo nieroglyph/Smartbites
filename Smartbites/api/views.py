@@ -101,15 +101,30 @@ from .serializers import RecipeSerializer
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def save_recipe(request):
-    """Save a new recipe for the logged-in user."""
-    data = request.data.copy()  # Make a copy of the request data
-    data['user'] = request.user.id  # Assign the logged-in user to the recipe
-
-    serializer = RecipeSerializer(data=data)
-    if serializer.is_valid():
-        serializer.save(user=request.user)
+    try:
+        data = request.data
+        title = data.get('title', '')
+        ingredients = data.get('ingredients', '')
+        instructions = data.get('instructions', '')
+        cost = data.get('cost', None)
+        
+        if not title or not ingredients or not instructions:
+            return Response({"error": "Title, ingredients, and instructions are required."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        
+        recipe = Recipe.objects.create(
+            user=request.user,
+            title=title,
+            ingredients=ingredients,
+            instructions=instructions,
+            cost=cost
+        )
+        
+        serializer = RecipeSerializer(recipe)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])
@@ -169,19 +184,37 @@ def recipe_search(request):
     return Response(recipes)
 
 # ollama - biteai
-import requests
-import json
-import base64
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from django.core.files.base import ContentFile
+from .models import UserProfile
+import requests, json, base64
 
 @api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
 def query_ollama(request):
-    """API to send a request to Ollama and return a response."""
+    """
+    Retrieves the current user's profile details and combines them with the query.
+    Sends the combined prompt to Ollama and returns the model's response.
+    """
     try:
         user_prompt = request.data.get("prompt", "Hello, Ollama!")
         image_file = request.FILES.get("image", None)
+
+        try:
+            profile = UserProfile.objects.get(user=request.user)
+        except UserProfile.DoesNotExist:
+            profile = None
+
+        profile_info_parts = []
+        if profile:
+            if profile.dietary_preference:
+                profile_info_parts.append(f"Diet: {profile.dietary_preference}")
+            if profile.allergies:
+                profile_info_parts.append(f"Allergies: {profile.allergies}")
+            if profile.budget is not None:
+                profile_info_parts.append(f"Budget: ₱{profile.budget}")
+        profile_info = ". ".join(profile_info_parts)
+
+        full_prompt = f"{profile_info}. {user_prompt}" if profile_info else user_prompt
 
         if image_file:
             image_content = image_file.read()
@@ -191,22 +224,106 @@ def query_ollama(request):
 
         ollama_payload = {
             "model": "biteai",
-            "prompt": user_prompt,
+            "prompt": full_prompt,
         }
-
         if encoded_image:
             ollama_payload["images"] = [encoded_image]
 
         response = requests.post("http://127.0.0.1:11434/api/generate", json=ollama_payload)
         response_jsons = [json.loads(line) for line in response.text.split("\n") if line.strip()]
-
         final_response = "".join(entry["response"] for entry in response_jsons)
 
-        # Preserve newlines and formatting instead of splitting
-        cleaned_response = final_response.replace('\n\n', '\n')  # Normalize line breaks
-        cleaned_response = cleaned_response.strip()
+        cleaned_response = final_response.replace('\n\n', '\n').strip()
 
         return Response({"response": cleaned_response}, status=response.status_code)
-
+    
     except Exception as e:
         return Response({"error": str(e)}, status=500)
+    
+# Get user data
+from .models import UserProfile
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def get_current_user(request):
+    try:
+        profile = UserProfile.objects.get(user=request.user)
+        return Response({
+            "full_name": request.user.full_name,
+            "email": request.user.email,
+            "profile_picture": "",  # or profile.profile_picture.url if you have it
+            "dietary_preference": profile.dietary_preference,
+            "allergies": profile.allergies,
+            "budget": profile.budget,
+        })
+    except UserProfile.DoesNotExist:
+        return Response({"error": "Profile not found"}, status=404)
+
+
+# Profile Edit
+from .serializers import UserSerializer
+
+@api_view(['PATCH'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def update_profile(request):
+    user = request.user
+    serializer = UserSerializer(user, data=request.data, partial=True)
+    
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data)
+    return Response(serializer.errors, status=400)
+
+# Password Change
+from .serializers import PasswordChangeSerializer
+from django.contrib.auth import update_session_auth_hash
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def change_password(request):
+    user = request.user
+    serializer = PasswordChangeSerializer(data=request.data)
+    
+    if serializer.is_valid():
+        # Verify old password first
+        if not user.check_password(serializer.validated_data['old_password']):
+            return Response({"old_password": ["Wrong current password"]}, status=400)
+            
+        user.set_password(serializer.validated_data['new_password1'])
+        user.save()
+        
+        # Keep user logged in after password change
+        update_session_auth_hash(request, user)
+        
+        return Response({'detail': 'Password updated successfully'})
+    return Response(serializer.errors, status=400)
+
+# Update user profile
+from .models import UserProfile
+
+@api_view(['PATCH'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def update_user_profile(request):
+    try:
+        profile = UserProfile.objects.get(user=request.user)
+    except UserProfile.DoesNotExist:
+        return Response({'error': 'Profile not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Allow updating dietary_preference, allergies and budget
+    data = request.data
+
+    if 'dietary_preference' in data:
+        profile.dietary_preference = data['dietary_preference']
+    if 'allergies' in data:
+        profile.allergies = data['allergies']
+    if 'budget' in data:
+        profile.budget = data['budget']
+
+    profile.save()
+    from .serializers import UserProfileSerializer
+    serializer = UserProfileSerializer(profile)
+    return Response(serializer.data, status=status.HTTP_200_OK)

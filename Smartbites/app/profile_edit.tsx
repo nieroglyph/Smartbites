@@ -14,7 +14,8 @@ import {
   Pressable,
   Animated,
   Easing,
-  TouchableWithoutFeedback
+  TouchableWithoutFeedback,
+  ActivityIndicator
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import * as ImagePicker from 'expo-image-picker';
@@ -22,6 +23,8 @@ import { CameraView, useCameraPermissions, CameraType, CameraCapturedPicture } f
 import { AntDesign, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import PhotoPreviewSection from './photo_preview_section';
 import { router } from 'expo-router';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import useUserProfile from './hooks/useUserProfile';
 
 interface Profile {
   name: string;
@@ -46,14 +49,18 @@ interface ProfileEditProps {
 }
 
 const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
-  const [profile, setProfile] = useState<Profile>({
-    name: 'John Doe',
-    email: 'john@example.com',
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-    profilePicture: null,
-  });
+
+const { profile: fetchedProfile, loading, error } = useUserProfile();
+
+// Replace the initial state and add useEffect for data fetching
+const [profile, setProfile] = useState<Profile>({
+  name: '',
+  email: '',
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: '',
+  profilePicture: null,
+});
   
   // Store temporary password values for the modal
   const [tempPasswords, setTempPasswords] = useState({
@@ -74,6 +81,17 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const notificationOpacity = useRef(new Animated.Value(0)).current;
+
+    // Sync fetched data with local state
+    useEffect(() => {
+      if (fetchedProfile) {
+        setProfile(prev => ({
+          ...prev,
+          name: fetchedProfile.name,
+          email: fetchedProfile.email
+        }));
+      }
+    }, [fetchedProfile]);
 
   useEffect(() => {
     if (permission && !permission.granted) {
@@ -141,6 +159,23 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
     }
   }, [showPasswordNotification]);
 
+    // Handle loading and error states
+    if (loading) {
+      return (
+        <View>
+          <ActivityIndicator size="large" color="#3498DB" />
+        </View>
+      );
+    }
+  
+    if (error) {
+      return (
+        <View>
+          <Text>Error loading profile: {error}</Text>
+        </View>
+      );
+    }
+
   const handleChange = (field: keyof Profile, value: string) => {
     setProfile(prev => ({ ...prev, [field]: value }));
     
@@ -191,40 +226,35 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validate()) return;
-
-    const updatedFields: Partial<Profile> = {};
-    
-    if (profile.name !== 'John Doe') {
-      updatedFields.name = profile.name;
-    }
-    
-    if (profile.email !== 'john@example.com') {
-      updatedFields.email = profile.email;
-    }
-    
-    if (profile.newPassword) {
-      updatedFields.newPassword = profile.newPassword;
-      updatedFields.currentPassword = profile.currentPassword;
-    }
-    
-    if (profile.profilePicture) {
-      updatedFields.profilePicture = profile.profilePicture;
-    }
-
-    console.log('Updating profile with:', updatedFields);
-    Alert.alert('Success', 'Profile updated successfully!');
-  };
-
-  const handleReturnToProfile = () => {
-    // Navigate back to profile.tsx
-    if (navigation) {
-      navigation.goBack();
-    } else {
-      // Fallback for when navigation prop is not available
-      console.log('Return to profile requested, but navigation prop is not available');
-      Alert.alert('Navigation', 'Returning to profile...');
+  
+    try {
+      const token = await AsyncStorage.getItem("authToken");
+      if (!token) return;
+  
+      const response = await fetch("http://192.168.100.10:8000/api/update-profile/", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Token ${token}`,
+        },
+        body: JSON.stringify({
+          full_name: profile.name,
+          email: profile.email
+        })
+      });
+  
+      if (response.ok) {
+        Alert.alert('Success', 'Profile updated successfully!');
+        router.back();
+      } else {
+        const errorData = await response.json();
+        Alert.alert('Error', errorData.detail || 'Failed to update profile');
+      }
+    } catch (error) {
+      console.error("Update error:", error);
+      Alert.alert('Error', 'Failed to update profile');
     }
   };
 
@@ -291,24 +321,30 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
     setShowCamera(true);
   };
 
-  const handlePasswordChangeSubmit = () => {
+  const handlePasswordChangeSubmit = async () => {
+    // Clear previous errors
+    setErrors({});
+  
     // Validate the temporary password fields
     let hasErrors = false;
     const newErrors: Errors = {};
     
+    // Client-side validation
     if (!tempPasswords.currentPassword) {
       newErrors.currentPassword = 'Current password is required';
       hasErrors = true;
     }
     
-    if (tempPasswords.newPassword && tempPasswords.newPassword.length < 8) {
+    if (!tempPasswords.newPassword) {
+      newErrors.newPassword = 'New password is required';
+      hasErrors = true;
+    } else if (tempPasswords.newPassword.length < 8) {
       newErrors.newPassword = 'Password must be at least 8 characters';
       hasErrors = true;
     }
     
     if (tempPasswords.newPassword !== tempPasswords.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
-      Alert.alert('Password Mismatch', 'The new password and confirm password fields do not match.');
       hasErrors = true;
     }
     
@@ -316,27 +352,68 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
       setErrors(newErrors);
       return;
     }
+  
+    try {
+      const token = await AsyncStorage.getItem("authToken");
+      if (!token) {
+        Alert.alert('Error', 'Not authenticated');
+        return;
+      }
+  
+      const response = await fetch("http://192.168.100.10:8000/api/change-password/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Token ${token}`,
+        },
+        body: JSON.stringify({
+          old_password: tempPasswords.currentPassword,
+          new_password1: tempPasswords.newPassword,
+          new_password2: tempPasswords.confirmPassword
+        })
+      });
+  
+      if (response.ok) {
+        // Success - clear fields and show notification
+        setTempPasswords({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+        setShowPasswordModal(false);
+        setShowPasswordNotification(true);
+      } else {
+        // Handle backend validation errors
+        const errorData = await response.json();
+        handlePasswordErrors(errorData);
+      }
+    } catch (error) {
+      console.error("Password change error:", error);
+      Alert.alert('Error', 'Failed to change password. Please try again.');
+    }
+  };
+  
+  // Add this error handling function
+  const handlePasswordErrors = (errors: any) => {
+    const newErrors: Errors = {};
     
-    // Only update the actual profile state when the user confirms
-    setProfile(prev => ({
-      ...prev,
-      currentPassword: tempPasswords.currentPassword,
-      newPassword: tempPasswords.newPassword,
-      confirmPassword: tempPasswords.confirmPassword
-    }));
+    if (errors.old_password) {
+      newErrors.currentPassword = errors.old_password.join(' ');
+    }
     
-    setIsPasswordEditing(true);
-    setShowPasswordModal(false);
+    if (errors.new_password1) {
+      newErrors.newPassword = errors.new_password1.join(' ');
+    }
     
-    // Reset temp password fields after updating
-    setTempPasswords({
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: ''
-    });
+    if (errors.new_password2) {
+      newErrors.confirmPassword = errors.new_password2.join(' ');
+    }
     
-    // Show notification that password was updated
-    setShowPasswordNotification(true);
+    if (errors.non_field_errors) {
+      Alert.alert('Error', errors.non_field_errors.join(' '));
+    }
+  
+    setErrors(newErrors);
   };
   
   const handleCancelPasswordChange = () => {

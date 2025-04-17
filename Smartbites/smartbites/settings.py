@@ -89,7 +89,11 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'smartbites',
         'USER': 'root',
+<<<<<<< HEAD
         'PASSWORD': 'mark1209',
+=======
+        'PASSWORD': 'hyeju1113',
+>>>>>>> 34cb7c5cbe3363c2d7dacd7434c833b121b8a3cc
         'HOST': 'localhost',
         'PORT': '3306',
     }
@@ -143,4 +147,8 @@ AUTH_USER_MODEL = 'api.CustomUser'  # Replace 'yourapp' with your app name
 #     "http://localhost:3000",  # Allow React frontend
 # ]
 
+<<<<<<< HEAD
 ALLOWED_HOSTS = ['127.0.0.1','192.168.1.9', '192.168.170.150','http://localhost:3306', '192.168.254.111', '192.168.100.10']  # Or ['your-local-ip']
+=======
+ALLOWED_HOSTS = ['127.0.0.1','192.168.1.9', '192.168.170.150','http://localhost:3306', '192.168.254.111', '192.168.100.10']  # Or ['your-local-ip']
+>>>>>>> 34cb7c5cbe3363c2d7dacd7434c833b121b8a3cc

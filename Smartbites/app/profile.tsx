@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -21,6 +21,8 @@ import { useFonts } from 'expo-font';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BlurView } from 'expo-blur';
 import * as MailComposer from 'expo-mail-composer';
+import { useFocusEffect } from '@react-navigation/native';
+import useUserProfile from './hooks/useUserProfile';
 
 type FeedbackCategory = 
   | 'Suggestions / Feature Requests'
@@ -50,6 +52,7 @@ interface SettingItemProps {
 }
 
 const ProfileScreen = () => {
+  const { profile, loading, error, refresh } = useUserProfile();
   const router = useRouter();
   const [fontsLoaded] = useFonts({
     'IstokWeb-Regular': require('../assets/fonts/IstokWeb-Regular.ttf'),
@@ -61,7 +64,6 @@ const ProfileScreen = () => {
   const [otherCategoryText, setOtherCategoryText] = useState('');
   const [feedbackMessage, setFeedbackMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [userEmail, setUserEmail] = useState('');
 
   // Animation refs
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
@@ -77,6 +79,13 @@ const ProfileScreen = () => {
     'Account or Billing Issues',
     'Other',
   ];
+
+    // Add automatic refresh when screen gains focus
+    useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh])
+  );
 
   useEffect(() => {
     if (feedbackModalVisible) {
@@ -120,34 +129,6 @@ const ProfileScreen = () => {
     }
   }, [feedbackModalVisible]);
 
-  useEffect(() => {
-    // Fetch user email from your database/API
-    const fetchUserEmail = async () => {
-      try {
-        const token = await AsyncStorage.getItem("authToken");
-        if (!token) return;
-
-        // Replace with your actual API endpoint to get user data
-        const response = await fetch("http://192.168.254.111:8000/api/user/", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Token ${token}`,
-          },
-        });
-
-        if (response.ok) {
-          const userData = await response.json();
-          setUserEmail(userData.email); // Assuming your API returns email in the response
-        }
-      } catch (error) {
-        console.error("Error fetching user email:", error);
-      }
-    };
-
-    fetchUserEmail();
-  }, []);
-
   if (!fontsLoaded) {
     return (
       <View style={styles.loadingContainer}>
@@ -155,12 +136,14 @@ const ProfileScreen = () => {
       </View>
     );
   }
-
-  const profile = {
-    profilePicture: null,
-    name: "Mark Denzel Permison",
-    accountNumber: "0123456789"
-  };
+  
+  if (error) {
+    return (
+      <View>
+        <Text>Error loading profile: {error}</Text>
+      </View>
+    );
+  }
 
   const settingsData: SettingItemProps[] = [
     { 
@@ -218,8 +201,7 @@ const ProfileScreen = () => {
           
           User Details:
           Name: ${profile.name}
-          Account Number: ${profile.accountNumber}
-          Email: ${userEmail}
+          Email: ${profile.email}
         `,
         isHtml: false
       });
@@ -244,7 +226,11 @@ const ProfileScreen = () => {
       const token = await AsyncStorage.getItem("authToken");
       if (!token) return;
   
+<<<<<<< HEAD
       await fetch("http://192.168.1.9:8000/api/logout/", {
+=======
+      await fetch("http://192.168.100.10:8000/api/logout/", {
+>>>>>>> 34cb7c5cbe3363c2d7dacd7434c833b121b8a3cc
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -286,8 +272,8 @@ const ProfileScreen = () => {
                 />
               </View>
               <View style={styles.profileInfo}>
-                <Text style={styles.userName}>{profile.name}</Text>
-                <Text style={styles.accountNumber}>Account number: {profile.accountNumber}</Text>
+                  <Text style={styles.userName}>{profile.name}</Text>
+                  <Text style={styles.userEmail}>{profile.email}</Text>
               </View>
               <TouchableOpacity 
                 activeOpacity={0.7}
@@ -517,7 +503,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     fontFamily: 'IstokWeb-Regular',
   },
-  accountNumber: {
+  userEmail: {
     fontSize: 14,
     color: "#7F8C8D",
     fontFamily: 'IstokWeb-Regular',
