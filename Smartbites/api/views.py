@@ -145,7 +145,7 @@ def delete_recipe(request, recipe_id):
     try:
         recipe = Recipe.objects.get(id=recipe_id, user=request.user)
         recipe.delete()
-        return Response({'message': 'Recipe deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)  # Remove message body
     except Recipe.DoesNotExist:
         return Response({'error': 'Recipe not found'}, status=status.HTTP_404_NOT_FOUND)
 
