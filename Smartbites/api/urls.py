@@ -4,8 +4,8 @@ from django.urls import path
 from .views import register_user, login_user, logout_user, my_secure_view
 # User Profiles
 from .views import get_user_profile
-# Save, Fetch, Delete Recipe
-from .views import save_recipe, get_user_recipes, delete_recipe
+# Save, Fetch, Delete, Edit Recipe
+from .views import save_recipe, get_user_recipes, delete_recipe, update_recipe
 # Nutrition, Recipe API
 from .views import nutrition_info, recipe_search
 # ollama
@@ -25,6 +25,7 @@ urlpatterns = [
     path('profile/', get_user_profile, name='get_user_profile'),
     path('save-recipe/', save_recipe, name='save_recipe'),
     path('get-user-recipes/', get_user_recipes, name='get_user_recipes'),
+    path('update-recipe/<int:recipe_id>/', update_recipe, name='update-recipe'),
     path('delete-recipe/<int:recipe_id>/', delete_recipe, name='delete_recipe'),
     path("nutrition/", nutrition_info, name="nutrition"),
     path("recipes/", recipe_search, name="recipes"),

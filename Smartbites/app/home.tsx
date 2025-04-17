@@ -8,6 +8,9 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  Modal,
+  TouchableWithoutFeedback,
+  TextInput,
 } from "react-native";
 import { useFonts } from "expo-font";
 import { useRouter } from "expo-router";
@@ -18,6 +21,7 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import useUserRecipes, { Recipe } from "./hooks/useUserRecipes";
 import { useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { BlurView } from "expo-blur";
 
 const HomeScreen = () => {
   const router = useRouter();
@@ -26,14 +30,60 @@ const HomeScreen = () => {
     "IstokWeb-Regular": require("../assets/fonts/IstokWeb-Regular.ttf"),
   });
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
+  const [editedTitle, setEditedTitle] = useState("");
+  const [editedIngredients, setEditedIngredients] = useState("");
+  const [editedInstructions, setEditedInstructions] = useState("");
+  const [editedCost, setEditedCost] = useState("");
   if (!fontsLoaded) return null;
+
+  const updateRecipe = async () => {
+    if (!editingRecipe) return;
+
+    const token = await AsyncStorage.getItem("authToken");
+    if (!token) {
+      Alert.alert("Not authenticated");
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `http://192.168.100.10:8000/api/update-recipe/${editingRecipe.id}/`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Token ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            title: editedTitle,
+            ingredients: editedIngredients,
+            instructions: editedInstructions,
+            cost: parseFloat(editedCost) || undefined,
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Update failed");
+      }
+
+      Alert.alert("Updated!", "Recipe updated successfully.");
+      refresh();
+      setEditingRecipe(null);
+    } catch (e: any) {
+      Alert.alert("Error", e.message || "Network request failed");
+    }
+  };
+
   const deleteRecipe = async (id: number) => {
     const token = await AsyncStorage.getItem("authToken");
     if (!token) {
       Alert.alert("Not authenticated");
       return;
     }
-  
+
     try {
       const res = await fetch(
         `http://192.168.100.10:8000/api/delete-recipe/${id}/`,
@@ -44,7 +94,7 @@ const HomeScreen = () => {
           }, // Remove Content-Type for empty body
         }
       );
-  
+
       if (res.status === 204) {
         Alert.alert("Deleted!", "Recipe removed successfully.");
         refresh();
@@ -110,6 +160,23 @@ const HomeScreen = () => {
                     isExpanded && styles.foodItemExpanded, // optional highlight
                   ]}
                 >
+                  {/* edit icon */}
+                  <TouchableOpacity
+                    style={styles.editButton}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      if (r) {
+                        setEditedTitle(r.title);
+                        setEditedIngredients(r.ingredients);
+                        setEditedInstructions(r.instructions);
+                        setEditedCost(r.cost?.toString() || "");
+                        setEditingRecipe(r);
+                      }
+                    }}
+                  >
+                    <Icon name="edit" size={20} color="#3498DB" />
+                  </TouchableOpacity>
+
                   {/* delete icon */}
                   <TouchableOpacity
                     style={styles.deleteButton}
@@ -158,6 +225,70 @@ const HomeScreen = () => {
           </ScrollView>
         )}
       </View>
+
+      <Modal
+        visible={!!editingRecipe}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setEditingRecipe(null)}
+      >
+        <TouchableWithoutFeedback onPress={() => setEditingRecipe(null)}>
+          <BlurView intensity={50} style={styles.modalOverlay}>
+            <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Edit Recipe</Text>
+
+                <TextInput
+                  style={styles.input}
+                  value={editedTitle}
+                  onChangeText={setEditedTitle}
+                  placeholder="Recipe Title"
+                />
+
+                <TextInput
+                  style={[styles.input, styles.multilineInput]}
+                  multiline
+                  value={editedIngredients}
+                  onChangeText={setEditedIngredients}
+                  placeholder="Ingredients (one per line)"
+                />
+
+                <TextInput
+                  style={[styles.input, styles.multilineInput]}
+                  multiline
+                  value={editedInstructions}
+                  onChangeText={setEditedInstructions}
+                  placeholder="Instructions"
+                />
+
+                <TextInput
+                  style={styles.input}
+                  value={editedCost}
+                  onChangeText={setEditedCost}
+                  placeholder="Cost (optional)"
+                  keyboardType="numeric"
+                />
+
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.cancelButton]}
+                    onPress={() => setEditingRecipe(null)}
+                  >
+                    <Text style={styles.buttonText}>Cancel</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.saveButton]}
+                    onPress={updateRecipe}
+                  >
+                    <Text style={styles.buttonText}>Save Changes</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </BlurView>
+        </TouchableWithoutFeedback>
+      </Modal>
 
       {/* Bottom Navigation */}
       <View style={styles.navContainer}>
@@ -302,7 +433,65 @@ const styles = StyleSheet.create({
     right: 8,
     padding: 4,
     zIndex: 2,
-  }
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  modalContent: {
+    backgroundColor: "white",
+    padding: 20,
+    borderRadius: 10,
+    width: "90%",
+    maxHeight: "80%",
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 15,
+    color: "#FE7F2D",
+    textAlign: "center",
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 10,
+  },
+  multilineInput: {
+    height: 100,
+    textAlignVertical: "top",
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 15,
+  },
+  modalButton: {
+    padding: 10,
+    borderRadius: 5,
+    minWidth: 100,
+    alignItems: "center",
+  },
+  cancelButton: {
+    backgroundColor: "#E0E0E0",
+  },
+  saveButton: {
+    backgroundColor: "#FE7F2D",
+  },
+  buttonText: {
+    color: "white",
+    fontWeight: "bold",
+  },
+  editButton: {
+    position: "absolute",
+    right: 40,
+    top: 10,
+    zIndex: 1,
+  },
 });
 
 export default HomeScreen;
