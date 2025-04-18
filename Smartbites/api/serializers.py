@@ -18,6 +18,12 @@ class RecipeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recipe
         fields = ['id', 'user', 'title', 'ingredients', 'instructions', 'cost', 'saved_at']
+        extra_kwargs = {
+            'title': {'required': False},
+            'ingredients': {'required': False},
+            'instructions': {'required': False},
+            'cost': {'required': False}
+        }
 
 # password edit
 from rest_framework import serializers

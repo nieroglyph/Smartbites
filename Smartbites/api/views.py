@@ -136,6 +136,20 @@ def get_user_recipes(request):
     serializer = RecipeSerializer(recipes, many=True)
     return Response(serializer.data)
 
+@api_view(['PUT'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def update_recipe(request, recipe_id):
+    try:
+        recipe = Recipe.objects.get(id=recipe_id, user=request.user)
+    except Recipe.DoesNotExist:
+        return Response({'error': 'Recipe not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = RecipeSerializer(recipe, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
 @authentication_classes([TokenAuthentication])
@@ -145,7 +159,7 @@ def delete_recipe(request, recipe_id):
     try:
         recipe = Recipe.objects.get(id=recipe_id, user=request.user)
         recipe.delete()
-        return Response({'message': 'Recipe deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)  # Remove message body
     except Recipe.DoesNotExist:
         return Response({'error': 'Recipe not found'}, status=status.HTTP_404_NOT_FOUND)
 
