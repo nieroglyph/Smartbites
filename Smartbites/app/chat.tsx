@@ -331,7 +331,7 @@ const ChatScreen = () => {
           Alert.alert("Error", "Not authenticated");
           return false;
         }
-        const response = await fetch('http://192.168.1.9:8000/api/query-ollama/', {
+        const response = await fetch('http://192.168.100.10:8000/api/query-ollama/', {
           method: 'POST',
           headers: { 'Content-Type': 'multipart/form-data',
                      'Authorization': `Token ${token}`
@@ -394,7 +394,7 @@ const ChatScreen = () => {
         Alert.alert("Error", "Not authenticated");
         return false;
       }
-      const response = await fetch("http://192.168.1.9:8000/api/save-recipe/", {
+      const response = await fetch("http://192.168.100.10:8000/api/save-recipe/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

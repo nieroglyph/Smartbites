@@ -101,31 +101,12 @@ from .serializers import RecipeSerializer
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def save_recipe(request):
-    try:
-        data = request.data
-        title = data.get('title', '')
-        ingredients = data.get('ingredients', '')
-        instructions = data.get('instructions', '')
-        cost = data.get('cost', None)
-        
-        if not title or not ingredients or not instructions:
-            return Response({"error": "Title, ingredients, and instructions are required."},
-                            status=status.HTTP_400_BAD_REQUEST)
-        
-        recipe = Recipe.objects.create(
-            user=request.user,
-            title=title,
-            ingredients=ingredients,
-            instructions=instructions,
-            cost=cost
-        )
-        
-        serializer = RecipeSerializer(recipe)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    
-    except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+    """Accept multiple recipes"""
+    serializer = RecipeSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save(user=request.user)
+        return Response({'status': 'success', 'recipe': serializer.data})
+    return Response({'status': 'error', 'errors': serializer.errors}, status=400)
 
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
@@ -341,26 +322,3 @@ def update_user_profile(request):
     from .serializers import UserProfileSerializer
     serializer = UserProfileSerializer(profile)
     return Response(serializer.data, status=status.HTTP_200_OK)
-
-# multiple recipes
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from .models import Recipe
-from .serializers import RecipeSerializer
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def save_recipe(request):
-    serializer = RecipeSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save(user=request.user)
-        return Response({'status': 'success', 'recipe': serializer.data})
-    return Response({'status': 'error', 'errors': serializer.errors}, status=400)
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def get_recipes(request):
-    recipes = Recipe.objects.filter(user=request.user).order_by('-created_at')
-    serializer = RecipeSerializer(recipes, many=True)
-    return Response({'recipes': serializer.data})

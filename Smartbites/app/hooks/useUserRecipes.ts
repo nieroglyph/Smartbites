@@ -20,7 +20,7 @@ export default function useUserRecipes() {
     try {
       const token = await AsyncStorage.getItem('authToken');
       if (!token) throw new Error('No auth token');
-      const res = await fetch('http://192.168.1.9:8000/api/get-user-recipes/', {
+      const res = await fetch('http://192.168.100.10:8000/api/get-user-recipes/', {
         headers: { Authorization: `Token ${token}` },
       });
       if (!res.ok) throw new Error(`Status ${res.status}`);
