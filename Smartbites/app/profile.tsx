@@ -193,10 +193,9 @@ const ProfileScreen = () => {
 
       // Compose the email
       const result = await MailComposer.composeAsync({
-        recipients: ['Smartbites@gmail.com'], // Replace with your support email
+        recipients: ['dt.smartbites@gmail.com'], // Replace with your support email
         subject: `Feedback: ${category}`,
         body: `
-          Feedback Category: ${category}
           Message: ${feedbackMessage}
           
           User Details:
