@@ -500,31 +500,26 @@ const ChatScreen = () => {
   }): Promise<boolean> => {
     try {
       const token = await AsyncStorage.getItem("authToken");
-      if (!token) {
-        Alert.alert("Error", "Not authenticated");
-        return false;
-      }
-      const response = await fetch(
-        "http://192.168.100.10:8000/api/save-recipe/",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Token ${token}`,
-          },
-          body: JSON.stringify(recipeData),
-        }
-      );
+      if (!token) throw new Error("Not authenticated");
+  
+      const response = await fetch("http://192.168.100.10:8000/api/save-recipe/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Token ${token}`,
+        },
+        body: JSON.stringify(recipeData),
+      });
+  
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to save recipe");
+        throw new Error(errorData.message || errorData.error || "Failed to save recipe");
       }
+      
       return true;
+      
     } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      Alert.alert("Error", errorMessage);
-      return false;
+      throw error; // Just re-throw instead of handling here
     }
   };
 
@@ -645,87 +640,76 @@ const ChatScreen = () => {
     return recipes;
   }
 
+  // Inside handleSaveRecipe function
   const handleSaveRecipe = async (recipeMsg: Message) => {
     const recipes = parseRecipes(recipeMsg.text);
-
+    
     if (recipes.length === 0) {
       Alert.alert("Error", "No valid recipe found to save");
       return;
     }
-
-    if (recipes.length === 1) {
-      const { title, ingredients, instructions, cost } = recipes[0];
-      const recipeData = { title, ingredients, instructions, cost };
-
-      const success = await saveRecipe(recipeData);
-      if (success) {
-        Alert.alert("Success", "Recipe saved successfully!");
+  
+    let successCount = 0;
+    let duplicateCount = 0;
+    let errorCount = 0;
+    const errorMessages: string[] = [];
+  
+    try {
+      // For single recipe
+      if (recipes.length === 1) {
+        const { title, ingredients, instructions, cost } = recipes[0];
+        try {
+          const result = await saveRecipe({ title, ingredients, instructions, cost });
+          if (result) successCount++;
+        } catch (error: unknown) {
+          if (error instanceof Error && error.message.includes("already exists")) {
+            duplicateCount++;
+          } else {
+            errorCount++;
+            errorMessages.push(error instanceof Error ? error.message : "Unknown error");
+          }
+        }
+      } 
+      // For multiple recipes
+      else {
+        const savePromises = recipes.map(async (recipe) => {
+          const { title, ingredients, instructions, cost } = recipe;
+          try {
+            await saveRecipe({ title, ingredients, instructions, cost });
+            successCount++;
+          } catch (error: unknown) {
+            if (error instanceof Error && error.message.includes("already exists")) {
+              duplicateCount++;
+            } else {
+              errorCount++;
+              errorMessages.push(error instanceof Error ? error.message : "Unknown error");
+            }
+          }
+        });
+  
+        await Promise.all(savePromises);
       }
-    } else {
-      try {
-        let successCount = 0;
-        let failedCount = 0;
-
-        Alert.alert(
-          "Save Recipes",
-          `Found ${recipes.length} recipes. Save all of them?`,
-          [
-            {
-              text: "Cancel",
-              style: "cancel",
-            },
-            {
-              text: "Save All",
-              onPress: async () => {
-                for (const recipe of recipes) {
-                  const { title, ingredients, instructions, cost } = recipe;
-                  const uniqueTitle =
-                    recipes.filter((r) => r.title === title).length > 1
-                      ? `${title} (${new Date().getTime()})`
-                      : title;
-
-                  const recipeData = {
-                    title: uniqueTitle,
-                    ingredients,
-                    instructions,
-                    cost,
-                  };
-
-                  try {
-                    const success = await saveRecipe(recipeData);
-                    if (success) {
-                      successCount++;
-                    } else {
-                      failedCount++;
-                    }
-                  } catch (error) {
-                    failedCount++;
-                    console.error("Error saving recipe:", error);
-                  }
-                }
-
-                if (successCount === recipes.length) {
-                  Alert.alert(
-                    "Success",
-                    `All ${successCount} recipes saved successfully!`
-                  );
-                } else if (successCount > 0) {
-                  Alert.alert(
-                    "Partial Success",
-                    `Saved ${successCount} out of ${recipes.length} recipes. ${failedCount > 0 ? `${failedCount} failed.` : ""}`
-                  );
-                } else {
-                  Alert.alert("Error", "Failed to save any recipes.");
-                }
-              },
-            },
-          ]
-        );
-      } catch (error: unknown) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        Alert.alert("Error", errorMessage);
+  
+      // Show consolidated alert
+      const messageParts = [];
+      if (successCount > 0) messageParts.push(`Saved ${successCount} new recipes`);
+      if (duplicateCount > 0) messageParts.push(`${duplicateCount} duplicates skipped`);
+      if (errorCount > 0) messageParts.push(`${errorCount} errors occurred`);
+  
+      if (messageParts.length > 0) {
+        let alertMessage = messageParts.join("\n");
+        
+        if (errorMessages.length > 0) {
+          alertMessage += `\n\nErrors:\n${errorMessages.slice(0, 3).join("\n")}`;
+          if (errorMessages.length > 3) alertMessage += `\n...and ${errorMessages.length - 3} more`;
+        }
+  
+        Alert.alert("Save Complete", alertMessage);
       }
+  
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      Alert.alert("Error", `Failed to save recipes: ${errorMessage}`);
     }
   };
 

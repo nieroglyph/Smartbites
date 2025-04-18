@@ -101,7 +101,21 @@ from .serializers import RecipeSerializer
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def save_recipe(request):
-    """Accept multiple recipes"""
+    """Save a recipe with duplicate checking"""
+    # Check for existing recipe first
+    existing = Recipe.objects.filter(
+        user=request.user,
+        title=request.data.get('title'),
+        ingredients=request.data.get('ingredients'),
+        instructions=request.data.get('instructions')
+    ).exists()
+
+    if existing:
+        return Response(
+            {'status': 'error', 'message': 'This recipe already exists in your collection'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
     serializer = RecipeSerializer(data=request.data)
     if serializer.is_valid():
         serializer.save(user=request.user)
