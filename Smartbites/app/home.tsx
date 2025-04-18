@@ -91,7 +91,7 @@ const HomeScreen = () => {
           method: "DELETE",
           headers: {
             Authorization: `Token ${token}`,
-          }, // Remove Content-Type for empty body
+          },
         }
       );
 
@@ -141,7 +141,6 @@ const HomeScreen = () => {
           <ScrollView contentContainerStyle={styles.scrollContent}>
             {recipes.map((r: Recipe) => {
               const isExpanded = expandedId === r.id;
-              // Safely parse cost (could be string or number or undefined)
               const costNum =
                 typeof r.cost === "number"
                   ? r.cost
@@ -152,12 +151,11 @@ const HomeScreen = () => {
                   key={r.id}
                   activeOpacity={0.8}
                   onPress={() => {
-                    // toggle expanded/collapse
                     setExpandedId(isExpanded ? null : r.id);
                   }}
                   style={[
                     styles.foodItem,
-                    isExpanded && styles.foodItemExpanded, // optional highlight
+                    isExpanded && styles.foodItemExpanded,
                   ]}
                 >
                   {/* edit icon */}
@@ -374,7 +372,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   foodItemExpanded: {
-    backgroundColor: "#FFF8E1", // subtle highlight
+    backgroundColor: "#FFF8E1",
   },
   recipeTitle: { fontSize: 18, marginBottom: 4, color: "#2E2E2E" },
   recipeMeta: { fontSize: 12, color: "#555", marginBottom: 8 },

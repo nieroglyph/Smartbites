@@ -149,7 +149,6 @@ const ChatScreen = () => {
     'IstokWeb-Regular': require('../assets/fonts/IstokWeb-Regular.ttf'),
   });
 
-  // Keyboard visibility detection
   useEffect(() => {
     const keyboardDidShowListener = Keyboard.addListener(
       'keyboardDidShow',
@@ -428,7 +427,6 @@ const ChatScreen = () => {
       cost: number | null;
     }> = [];
     
-    // First try to split by common recipe delimiters
     const recipeDelimiters = [
       /\*\*Recipe \d+\*\*/g,
       /\n##\s/g,
@@ -439,7 +437,6 @@ const ChatScreen = () => {
     let recipeSections: string[] = [];
     let delimiterUsed = null;
 
-    // Try each delimiter until we find one that splits the text into multiple recipes
     for (const delimiter of recipeDelimiters) {
       const sections = responseText.split(delimiter).filter(s => s.trim());
       if (sections.length > 1) {
@@ -449,7 +446,6 @@ const ChatScreen = () => {
       }
     }
 
-    // If no delimiter worked, try to split by "Title:" patterns
     if (recipeSections.length <= 1) {
       const titleMatches = [...responseText.matchAll(/\*\*Title:\*\*\s*(.+?)\n/g)];
       if (titleMatches.length > 1) {
@@ -465,19 +461,16 @@ const ChatScreen = () => {
       }
     }
 
-    // If still no sections found, treat the whole message as one recipe
     if (recipeSections.length <= 1) {
       recipeSections = [responseText];
     }
 
-    // Parse each section
     for (const section of recipeSections) {
       let title = "Untitled Recipe";
       let ingredients = "";
       let instructions = "";
       let cost: number | null = null;
 
-      // Extract title
       const titleMatch = section.match(/\*\*Title:\*\*\s*(.+)/i) || 
                         section.match(/\*\*(.+?)\*\*/i) ||
                         section.match(/^#\s*(.+)/i);
@@ -485,7 +478,6 @@ const ChatScreen = () => {
         title = titleMatch[1].trim();
       }
 
-      // Extract ingredients
       const ingredientsMatch = section.match(/\*\*Ingredients:\*\*\s*([\s\S]+?)(?:\*\*Instructions:\*\*|\*\*Total|\n\n|$)/i);
       if (ingredientsMatch) {
         ingredients = ingredientsMatch[1].trim();
@@ -495,7 +487,6 @@ const ChatScreen = () => {
         ingredients = section.substring(ingredientsIndex + "Ingredients:".length, endIndex).trim();
       }
 
-      // Extract instructions
       const instructionsMatch = section.match(/\*\*Instructions:\*\*\s*([\s\S]+?)(?:\*\*Total|\n\n|$)/i);
       if (instructionsMatch) {
         instructions = instructionsMatch[1].trim();
@@ -504,13 +495,11 @@ const ChatScreen = () => {
         instructions = section.substring(instructionsIndex + "Instructions:".length).trim();
       }
 
-      // Extract cost
       const costMatch = section.match(/\*\*Total Estimated Price:\*\*\s*₱([\d,\.]+)/i);
       if (costMatch) {
         cost = parseFloat(costMatch[1].replace(/,/g, ''));
       }
 
-      // Only add if we have meaningful content
       if ((ingredients || instructions) && !section.includes("Here are") && !section.includes("I found")) {
         recipes.push({ 
           title: title || "Untitled Recipe",
@@ -533,7 +522,6 @@ const ChatScreen = () => {
     }
 
     if (recipes.length === 1) {
-      // Single recipe case
       const { title, ingredients, instructions, cost } = recipes[0];
       const recipeData = { title, ingredients, instructions, cost };
       
@@ -542,12 +530,10 @@ const ChatScreen = () => {
         Alert.alert("Success", "Recipe saved successfully!");
       }
     } else {
-      // Multiple recipes case - save each one separately
       try {
         let successCount = 0;
         let failedCount = 0;
         
-        // Show confirmation for multiple recipes
         Alert.alert(
           "Save Recipes",
           `Found ${recipes.length} recipes. Save all of them?`,
@@ -561,7 +547,6 @@ const ChatScreen = () => {
               onPress: async () => {
                 for (const recipe of recipes) {
                   const { title, ingredients, instructions, cost } = recipe;
-                  // Ensure each recipe has a unique title if they're similar
                   const uniqueTitle = recipes.filter(r => r.title === title).length > 1 
                     ? `${title} (${new Date().getTime()})`
                     : title;
