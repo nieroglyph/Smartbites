@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import Entypo from "react-native-vector-icons/Entypo";
 import FontAwesomeIcon from "react-native-vector-icons/FontAwesome";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import useUserProfile from "./hooks/useUserProfile";
 
 type RootStackParamList = {
@@ -31,32 +32,77 @@ type RootStackParamList = {
 
 const BudgetScreen = () => {
   const router = useRouter();
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { profile, loading: profileLoading, error: profileError } = useUserProfile();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const {
+    profile,
+    loading: profileLoading,
+    error: profileError,
+  } = useUserProfile();
 
-  const [expenses, setExpenses] = useState<{ amount: string; description: string }[]>([]);
-  const [history, setHistory] = useState<{ amount: string; description: string; date: string }[]>([]);
+  const [expenses, setExpenses] = useState<
+    { amount: string; description: string }[]
+  >([]);
+  const [history, setHistory] = useState<
+    { amount: string; description: string; date: string }[]
+  >([]);
 
-  if (profileLoading) return <ActivityIndicator style={{ flex: 1, justifyContent: 'center' }} />;
-  if (profileError)   return <Text>Error: {profileError}</Text>;
+  // load saved history once
+  useEffect(() => {
+    (async () => {
+      try {
+        const json = await AsyncStorage.getItem("expenseHistory");
+        if (json) setHistory(JSON.parse(json));
+      } catch (err) {
+        console.error("Failed to load history", err);
+      }
+    })();
+  }, []);
+
+  // whenever history changes, save it
+  useEffect(() => {
+    (async () => {
+      try {
+        await AsyncStorage.setItem("expenseHistory", JSON.stringify(history));
+      } catch (err) {
+        console.error("Failed to save history", err);
+      }
+    })();
+  }, [history]);
+
+  if (profileLoading)
+    return <ActivityIndicator style={{ flex: 1, justifyContent: "center" }} />;
+  if (profileError) return <Text>Error: {profileError}</Text>;
 
   // Pull budget from the server
   const budget = profile.budget ?? 0;
+  const totalExpenses = history.reduce(
+    (sum, e) => sum + parseFloat(e.amount || "0"),
+    0
+  );
+  const available = (budget - totalExpenses).toFixed(2);
 
   const showAlert = (message: string) => {
-    if (Platform.OS === 'android') ToastAndroid.show(message, ToastAndroid.SHORT);
-    else                           Alert.alert(message);
+    if (Platform.OS === "android")
+      ToastAndroid.show(message, ToastAndroid.SHORT);
+    else Alert.alert(message);
   };
 
   const handleNumericInput = (text: string, setter: (val: string) => void) => {
-    const digits = text.replace(/[^0-9]/g, '');
-    if (text !== digits) showAlert('Numbers only!');
+    const digits = text.replace(/[^0-9]/g, "");
+    if (text !== digits) showAlert("Numbers only!");
     setter(digits);
   };
 
-  const addExpense    = () => setExpenses([...expenses, { amount: '', description: '' }]);
-  const removeExpense = (i: number) => setExpenses(expenses.filter((_, idx) => idx !== i));
-  const updateExpense = (i: number, field: 'amount'|'description', val: string) => {
+  const addExpense = () =>
+    setExpenses([...expenses, { amount: "", description: "" }]);
+  const removeExpense = (i: number) =>
+    setExpenses(expenses.filter((_, idx) => idx !== i));
+  const updateExpense = (
+    i: number,
+    field: "amount" | "description",
+    val: string
+  ) => {
     const copy = [...expenses];
     copy[i][field] = val;
     setExpenses(copy);
@@ -65,35 +111,35 @@ const BudgetScreen = () => {
   const saveExpenses = () => {
     const now = new Date().toLocaleString();
     const newEntries = expenses
-      .filter(e => e.amount)
-      .map(e => ({ ...e, date: now }));
-    setHistory([...history, ...newEntries]);
+      .filter((e) => e.amount)
+      .map((e) => ({ ...e, date: now }));
+
+    setHistory((prev) => [...prev, ...newEntries]);
     setExpenses([]);
   };
 
-  const totalExpenses = history.reduce((sum, e) => sum + parseFloat(e.amount||'0'), 0);
-  const available     = (budget - totalExpenses).toFixed(2);
-
   const resetHistory = () => {
-    setHistory([]);
+    setHistory([]); // triggers persisting an empty array
   };
 
   return (
     <View style={styles.container}>
       {/* Logo */}
-      <Image source={require('../assets/images/logo/smartbites-high-resolution-logo-transparent.png')}
-             style={styles.logo}
+      <Image
+        source={require("../assets/images/logo/smartbites-high-resolution-logo-transparent.png")}
+        style={styles.logo}
       />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-
         {/* Budget Card */}
         <View style={styles.allowanceCard}>
           <Text style={styles.allowanceInfoText}>Your Budget</Text>
           <Text style={styles.allowanceAmountText}>₱{budget.toFixed(2)}</Text>
 
           <View style={styles.availableAllowanceContainer}>
-            <Text style={styles.availableAllowanceLabel}>Available Balance</Text>
+            <Text style={styles.availableAllowanceLabel}>
+              Available Balance
+            </Text>
             <Text style={styles.availableAllowanceValue}>₱{available}</Text>
           </View>
         </View>
@@ -101,7 +147,12 @@ const BudgetScreen = () => {
         {/* Add Expense */}
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
-            <FontAwesomeIcon name="minus-circle" size={20} color="#FE7F2D" style={styles.icon}/>
+            <FontAwesomeIcon
+              name="minus-circle"
+              size={20}
+              color="#FE7F2D"
+              style={styles.icon}
+            />
             <Text style={styles.sectionTitle}>Add New Expense</Text>
           </View>
 
@@ -115,7 +166,11 @@ const BudgetScreen = () => {
                   placeholder="0"
                   placeholderTextColor="#888"
                   value={exp.amount}
-                  onChangeText={txt => handleNumericInput(txt, v => updateExpense(i, 'amount', v))}
+                  onChangeText={(txt) =>
+                    handleNumericInput(txt, (v) =>
+                      updateExpense(i, "amount", v)
+                    )
+                  }
                 />
               </View>
               <TextInput
@@ -123,7 +178,7 @@ const BudgetScreen = () => {
                 placeholder="Description"
                 placeholderTextColor="#888"
                 value={exp.description}
-                onChangeText={txt => updateExpense(i, 'description', txt)}
+                onChangeText={(txt) => updateExpense(i, "description", txt)}
               />
               <TouchableOpacity onPress={() => removeExpense(i)}>
                 <Entypo name="circle-with-cross" size={24} color="#FF6B6B" />
@@ -132,11 +187,16 @@ const BudgetScreen = () => {
           ))}
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.addButton}    onPress={addExpense}>
+            <TouchableOpacity style={styles.addButton} onPress={addExpense}>
               <Text style={styles.buttonText}>Add Expense</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.saveButton, !expenses.length && styles.disabledButton]}
-                              onPress={saveExpenses} disabled={!expenses.length}
+            <TouchableOpacity
+              style={[
+                styles.saveButton,
+                !expenses.length && styles.disabledButton,
+              ]}
+              onPress={saveExpenses}
+              disabled={!expenses.length}
             >
               <Text style={styles.buttonText}>Save Expenses</Text>
             </TouchableOpacity>
@@ -146,7 +206,12 @@ const BudgetScreen = () => {
         {/* Expense History */}
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
-            <FontAwesomeIcon name="history" size={20} color="#FE7F2D" style={styles.icon}/>
+            <FontAwesomeIcon
+              name="history"
+              size={20}
+              color="#FE7F2D"
+              style={styles.icon}
+            />
             <Text style={styles.sectionTitle}>Expense History</Text>
           </View>
 
@@ -171,7 +236,7 @@ const BudgetScreen = () => {
           )}
         </View>
 
-        <View style={{ height: 70 }}/>
+        <View style={{ height: 70 }} />
       </ScrollView>
 
       {/* Navigation Bar - kept exactly the same */}
