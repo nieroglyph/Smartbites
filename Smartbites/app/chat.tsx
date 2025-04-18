@@ -9,7 +9,9 @@ import {
   ScrollView,
   Alert,
   Platform,
-  Animated
+  Animated,
+  Keyboard,
+  KeyboardAvoidingView
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import FontAwesomeIcon from 'react-native-vector-icons/FontAwesome';
@@ -136,6 +138,7 @@ const ChatScreen = () => {
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
   const [inputHeight, setInputHeight] = useState(16);
   const [isAIResponding, setIsAIResponding] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   const responseInterval = useRef<NodeJS.Timeout | null>(null);
   
   const [cameraPermission, requestPermission] = useCameraPermissions();
@@ -145,6 +148,27 @@ const ChatScreen = () => {
   const [fontsLoaded] = useFonts({
     'IstokWeb-Regular': require('../assets/fonts/IstokWeb-Regular.ttf'),
   });
+
+  // Keyboard visibility detection
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      () => {
+        setKeyboardVisible(true);
+      }
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => {
+        setKeyboardVisible(false);
+      }
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
 
   const clearChat = () => {
     Alert.alert(
@@ -158,14 +182,11 @@ const ChatScreen = () => {
         { 
           text: "Clear", 
           onPress: () => {
-            // Clear any ongoing response interval
             if (responseInterval.current) {
               clearInterval(responseInterval.current);
               responseInterval.current = null;
             }
-            // Stop AI response
             setIsAIResponding(false);
-            // Reset to initial state
             setMessages([{
               id: 1,
               text: "Hello! I'm your SmartBites assistant. How can I help you today?",
@@ -180,7 +201,6 @@ const ChatScreen = () => {
 
   useEffect(() => {
     return () => {
-      // Clean up interval when component unmounts
       if (responseInterval.current) {
         clearInterval(responseInterval.current);
       }
@@ -312,7 +332,7 @@ const ChatScreen = () => {
           Alert.alert("Error", "Not authenticated");
           return false;
         }
-        const response = await fetch('http://192.168.100.10:8000/api/query-ollama/', {
+        const response = await fetch('http://192.168.1.9:8000/api/query-ollama/', {
           method: 'POST',
           headers: { 'Content-Type': 'multipart/form-data',
                      'Authorization': `Token ${token}`
@@ -332,7 +352,6 @@ const ChatScreen = () => {
           prev.map(msg => (msg.id === thinkingMessage.id ? { ...msg, text: '' } : msg))
         );
   
-        // Store interval reference
         responseInterval.current = setInterval(() => {
           if (index < fullResponse.length) {
             currentText += fullResponse[index];
@@ -376,7 +395,7 @@ const ChatScreen = () => {
         Alert.alert("Error", "Not authenticated");
         return false;
       }
-      const response = await fetch("http://192.168.100.10:8000/api/save-recipe/", {
+      const response = await fetch("http://192.168.1.9:8000/api/save-recipe/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -396,59 +415,195 @@ const ChatScreen = () => {
     }
   };  
 
-  function parseRecipe(responseText: string): {
+  function parseRecipes(responseText: string): Array<{
     title: string;
     ingredients: string;
     instructions: string;
     cost: number | null;
-  } {
-    let title = "Untitled Recipe";
-    let ingredients = "";
-    let instructions = "";
-    let cost: number | null = null;
-  
-    const titleMatch = responseText.match(/\*\*Title:\*\*\s*(.+)/i);
-    if (titleMatch) {
-      title = titleMatch[1].trim();
-    }
-  
-    const ingredientsSplit = responseText.split("**Ingredients:**");
-    if (ingredientsSplit.length > 1) {
-      const ingAndAfter = ingredientsSplit[1];
-      const instructionsSplit = ingAndAfter.split("**Instructions:**");
-      ingredients = instructionsSplit[0].trim();
-  
-      if (instructionsSplit.length > 1) {
-        let instructionsSection = instructionsSplit[1].trim();
-  
-        const costMatch = instructionsSection.match(/\*\*Total Estimated Price:\*\*\s*₱([\d,\.]+)/i);
-        if (costMatch) {
-          cost = parseFloat(costMatch[1].replace(/,/g, ''));
-          instructionsSection = instructionsSection.replace(costMatch[0], "").trim();
-        }
-        instructions = instructionsSection;
+  }> {
+    const recipes: Array<{
+      title: string;
+      ingredients: string;
+      instructions: string;
+      cost: number | null;
+    }> = [];
+    
+    // First try to split by common recipe delimiters
+    const recipeDelimiters = [
+      /\*\*Recipe \d+\*\*/g,
+      /\n##\s/g,
+      /\n\n\n/g,
+      /\n\*\*\d+\.\*\*\s/g
+    ];
+
+    let recipeSections: string[] = [];
+    let delimiterUsed = null;
+
+    // Try each delimiter until we find one that splits the text into multiple recipes
+    for (const delimiter of recipeDelimiters) {
+      const sections = responseText.split(delimiter).filter(s => s.trim());
+      if (sections.length > 1) {
+        recipeSections = sections;
+        delimiterUsed = delimiter;
+        break;
       }
     }
-  
-    return { title, ingredients, instructions, cost };
-  }  
+
+    // If no delimiter worked, try to split by "Title:" patterns
+    if (recipeSections.length <= 1) {
+      const titleMatches = [...responseText.matchAll(/\*\*Title:\*\*\s*(.+?)\n/g)];
+      if (titleMatches.length > 1) {
+        recipeSections = [];
+        let lastIndex = 0;
+        titleMatches.forEach((match, index) => {
+          if (index > 0) {
+            recipeSections.push(responseText.substring(lastIndex, match.index));
+          }
+          lastIndex = match.index || 0;
+        });
+        recipeSections.push(responseText.substring(lastIndex));
+      }
+    }
+
+    // If still no sections found, treat the whole message as one recipe
+    if (recipeSections.length <= 1) {
+      recipeSections = [responseText];
+    }
+
+    // Parse each section
+    for (const section of recipeSections) {
+      let title = "Untitled Recipe";
+      let ingredients = "";
+      let instructions = "";
+      let cost: number | null = null;
+
+      // Extract title
+      const titleMatch = section.match(/\*\*Title:\*\*\s*(.+)/i) || 
+                        section.match(/\*\*(.+?)\*\*/i) ||
+                        section.match(/^#\s*(.+)/i);
+      if (titleMatch) {
+        title = titleMatch[1].trim();
+      }
+
+      // Extract ingredients
+      const ingredientsMatch = section.match(/\*\*Ingredients:\*\*\s*([\s\S]+?)(?:\*\*Instructions:\*\*|\*\*Total|\n\n|$)/i);
+      if (ingredientsMatch) {
+        ingredients = ingredientsMatch[1].trim();
+      } else if (section.includes("Ingredients:")) {
+        const ingredientsIndex = section.indexOf("Ingredients:");
+        const endIndex = section.indexOf("Instructions:", ingredientsIndex) || section.length;
+        ingredients = section.substring(ingredientsIndex + "Ingredients:".length, endIndex).trim();
+      }
+
+      // Extract instructions
+      const instructionsMatch = section.match(/\*\*Instructions:\*\*\s*([\s\S]+?)(?:\*\*Total|\n\n|$)/i);
+      if (instructionsMatch) {
+        instructions = instructionsMatch[1].trim();
+      } else if (section.includes("Instructions:")) {
+        const instructionsIndex = section.indexOf("Instructions:");
+        instructions = section.substring(instructionsIndex + "Instructions:".length).trim();
+      }
+
+      // Extract cost
+      const costMatch = section.match(/\*\*Total Estimated Price:\*\*\s*₱([\d,\.]+)/i);
+      if (costMatch) {
+        cost = parseFloat(costMatch[1].replace(/,/g, ''));
+      }
+
+      // Only add if we have meaningful content
+      if ((ingredients || instructions) && !section.includes("Here are") && !section.includes("I found")) {
+        recipes.push({ 
+          title: title || "Untitled Recipe",
+          ingredients: ingredients || "No ingredients listed",
+          instructions: instructions || "No instructions provided",
+          cost 
+        });
+      }
+    }
+
+    return recipes;
+  }
 
   const handleSaveRecipe = async (recipeMsg: Message) => {
-    // Parse the AI response to extract structured recipe info.
-    const { title, ingredients, instructions, cost } = parseRecipe(recipeMsg.text);
+    const recipes = parseRecipes(recipeMsg.text);
     
-    const recipeData = {
-      title,
-      ingredients,
-      instructions,
-      cost, 
-    };
-    
-    const success = await saveRecipe(recipeData);
-    if (success) {
-      Alert.alert("Success", "Recipe saved successfully!");
+    if (recipes.length === 0) {
+      Alert.alert("Error", "No valid recipe found to save");
+      return;
     }
-  };  
+
+    if (recipes.length === 1) {
+      // Single recipe case
+      const { title, ingredients, instructions, cost } = recipes[0];
+      const recipeData = { title, ingredients, instructions, cost };
+      
+      const success = await saveRecipe(recipeData);
+      if (success) {
+        Alert.alert("Success", "Recipe saved successfully!");
+      }
+    } else {
+      // Multiple recipes case - save each one separately
+      try {
+        let successCount = 0;
+        let failedCount = 0;
+        
+        // Show confirmation for multiple recipes
+        Alert.alert(
+          "Save Recipes",
+          `Found ${recipes.length} recipes. Save all of them?`,
+          [
+            {
+              text: "Cancel",
+              style: "cancel"
+            },
+            { 
+              text: "Save All", 
+              onPress: async () => {
+                for (const recipe of recipes) {
+                  const { title, ingredients, instructions, cost } = recipe;
+                  // Ensure each recipe has a unique title if they're similar
+                  const uniqueTitle = recipes.filter(r => r.title === title).length > 1 
+                    ? `${title} (${new Date().getTime()})`
+                    : title;
+                  
+                  const recipeData = { 
+                    title: uniqueTitle, 
+                    ingredients, 
+                    instructions, 
+                    cost 
+                  };
+                  
+                  try {
+                    const success = await saveRecipe(recipeData);
+                    if (success) {
+                      successCount++;
+                    } else {
+                      failedCount++;
+                    }
+                  } catch (error) {
+                    failedCount++;
+                    console.error("Error saving recipe:", error);
+                  }
+                }
+                
+                if (successCount === recipes.length) {
+                  Alert.alert("Success", `All ${successCount} recipes saved successfully!`);
+                } else if (successCount > 0) {
+                  Alert.alert("Partial Success", 
+                    `Saved ${successCount} out of ${recipes.length} recipes. ${failedCount > 0 ? `${failedCount} failed.` : ''}`);
+                } else {
+                  Alert.alert("Error", "Failed to save any recipes.");
+                }
+              }
+            }
+          ]
+        );
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        Alert.alert("Error", errorMessage);
+      }
+    }
+  };
   
   const pickImage = async (source: 'gallery' | 'camera') => {
     if (isAIResponding) return;
@@ -639,178 +794,207 @@ const ChatScreen = () => {
   }
 
   return (
-    <View style={styles.container}>
-      {/* Header with logo and clear chat button */}
-      <View style={styles.logoContainer}>
-        <Image
-          source={require('../assets/images/logo/smartbites-high-resolution-logo-transparent.png')}
-          style={styles.logo}
-        />
-        <TouchableOpacity 
-          style={styles.clearButton}
-          onPress={clearChat}
-        >
-          <Icon name="delete" size={24} color="#FE7F2D" />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.chatArea}>
-      <ScrollView 
-        ref={scrollViewRef}
-        style={styles.chatContent}
-        contentContainerStyle={styles.chatContentContainer}
-        onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
-      >
-        {messages.map((msg) => (
-          <View 
-            key={msg.id} 
-            style={[
-              msg.isUser ? styles.userMessageContainer : styles.aiMessageContainer,
-              { marginBottom: 16 }
-            ]}
-          >
-            <View style={msg.isUser ? styles.userMessage : styles.aiMessage}>
-              {msg.image && (
-                <Image 
-                  source={{ uri: msg.image }} 
-                  style={styles.messageImage}
-                  resizeMode="cover"
-                  onError={(e) => console.log('Image load error:', e.nativeEvent.error)}
-                />
-              )}
-              {msg.text === '###THINKING_ANIMATION###' ? (
-                  <View style={styles.thinkingMessageContainer}>
-                    <ThinkingDots />
-                  </View>
-                ) : msg.text ? (
-                  <Text style={[styles.messageText, styles.defaultFont]}>
-                    <FormattedText text={msg.text} />
-                  </Text>
-                ) : null}
-              <Text style={[styles.messageTime, styles.defaultFont]}>{msg.time}</Text>
-              {/* If this is an AI message, show an inline Save Recipe button */}
-              {!msg.isUser && (
-                <TouchableOpacity 
-                  style={styles.saveRecipeInlineButton} 
-                  onPress={() => handleSaveRecipe(msg)}
-                >
-                  <Text style={styles.saveRecipeInlineButtonText}>Save Recipe</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        ))}
-      </ScrollView>
-
-      </View>
-
-      {photoPreview && (
-        <View style={styles.photoPreviewContainer}>
-          <Image 
-            source={{ uri: photoPreview }} 
-            style={styles.photoPreviewImage}
-            resizeMode="cover"
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={styles.container}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
+    >
+      <View style={styles.container}>
+        <View style={styles.logoContainer}>
+          <Image
+            source={require('../assets/images/logo/smartbites-high-resolution-logo-transparent.png')}
+            style={styles.logo}
           />
           <TouchableOpacity 
-            style={styles.removePhotoButton}
-            onPress={removePhotoPreview}
+            style={styles.clearButton}
+            onPress={clearChat}
           >
-            <Icon name="close" size={20} color="white" />
+            <Icon name="delete" size={24} color="#FE7F2D" />
           </TouchableOpacity>
         </View>
-      )}
 
-      <View style={styles.inputWrapper}>
-        <View style={styles.inputContainer}>
-          <View style={styles.inputSection}>
-            <View style={styles.chatboxContainer}>
-              <TextInput
+        <View style={styles.chatArea}>
+          <ScrollView 
+            ref={scrollViewRef}
+            style={styles.chatContent}
+            contentContainerStyle={styles.chatContentContainer}
+            onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+          >
+            {messages.map((msg) => (
+              <View 
+                key={msg.id} 
                 style={[
-                  styles.input, 
-                  styles.defaultFont, 
-                  { height: Math.max(16, inputHeight) },
-                  isAIResponding && styles.disabledInput
+                  msg.isUser ? styles.userMessageContainer : styles.aiMessageContainer,
+                  { marginBottom: 16 }
                 ]}
-                placeholder={isAIResponding ? "AI is responding..." : "Type your message..."}
-                placeholderTextColor="#999"
-                multiline
-                value={message}
-                onChangeText={setMessage}
-                onContentSizeChange={(event) => {
-                  const height = event.nativeEvent.contentSize.height;
-                  const newHeight = Math.max(16, Math.ceil(height));
-                  setInputHeight(newHeight);
-                }}
-                onSubmitEditing={handleSend}
-                editable={!isAIResponding}
-              />
-              <View style={styles.mediaButtons}>
-                <TouchableOpacity 
-                  style={[styles.mediaButton, isAIResponding && styles.disabledButton]}
-                  onPress={() => pickImage('camera')}
-                  disabled={isAIResponding}
-                >
-                  <FontAwesomeIcon name="camera" size={16} color={isAIResponding ? "#ccc" : "#FE7F2D"} />
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.mediaButton, isAIResponding && styles.disabledButton]}
-                  onPress={() => pickImage('gallery')}
-                  disabled={isAIResponding}
-                >
-                  <FontAwesomeIcon name="image" size={16} color={isAIResponding ? "#ccc" : "#FE7F2D"} />
-                </TouchableOpacity>
+              >
+                <View style={msg.isUser ? styles.userMessage : styles.aiMessage}>
+                  {msg.image && (
+                    <Image 
+                      source={{ uri: msg.image }} 
+                      style={styles.messageImage}
+                      resizeMode="cover"
+                      onError={(e) => console.log('Image load error:', e.nativeEvent.error)}
+                    />
+                  )}
+                  {msg.text === '###THINKING_ANIMATION###' ? (
+                    <View style={styles.thinkingMessageContainer}>
+                      <ThinkingDots />
+                    </View>
+                  ) : msg.text ? (
+                    <Text style={[styles.messageText, styles.defaultFont]}>
+                      <FormattedText text={msg.text} />
+                    </Text>
+                  ) : null}
+                  
+                  {/* Only show timestamp directly if it's not a recipe message */}
+                  {!(!msg.isUser && 
+                   !isAIResponding && 
+                   msg.text && 
+                   msg.text.toLowerCase().includes('ingredients') && 
+                   msg.text.toLowerCase().includes('instructions')) && (
+                    <Text style={[styles.messageTime, styles.defaultFont]}>{msg.time}</Text>
+                  )}
+                  
+                  {/* Recipe action bar with save button */}
+                  {!msg.isUser && 
+                  !isAIResponding && 
+                  msg.text && 
+                  msg.text.toLowerCase().includes('ingredients') && 
+                  msg.text.toLowerCase().includes('instructions') && (
+                    <View style={styles.recipeActionBar}>
+                      <View style={styles.recipeActionBarLeft}>
+                        <TouchableOpacity 
+                          style={styles.saveRecipeInlineButton} 
+                          onPress={() => handleSaveRecipe(msg)}
+                          activeOpacity={0.7}
+                        >
+                          <MaterialCommunityIcons name="bookmark-outline" size={16} color="#fff" />
+                          <Text style={styles.saveRecipeInlineButtonText}>Save Recipe</Text>
+                        </TouchableOpacity>
+                      </View>
+                      <Text style={styles.recipeTimeStamp}>{msg.time}</Text>
+                    </View>
+                  )}
+                </View>
               </View>
-            </View>
+            ))}
+          </ScrollView>
+        </View>
 
+        {photoPreview && (
+          <View style={styles.photoPreviewContainer}>
+            <Image 
+              source={{ uri: photoPreview }} 
+              style={styles.photoPreviewImage}
+              resizeMode="cover"
+            />
             <TouchableOpacity 
-              style={[styles.sendButton, isAIResponding && styles.disabledButton]}
-              onPress={handleSend}
-              disabled={isAIResponding}
+              style={styles.removePhotoButton}
+              onPress={removePhotoPreview}
             >
-              <Icon name="send" size={16} color={isAIResponding ? "#ccc" : "#fff"} />
+              <Icon name="close" size={20} color="white" />
             </TouchableOpacity>
           </View>
-        </View>
-      </View>
+        )}
 
-      <View style={styles.navContainer}>
-        <View style={styles.navigation}>
-          <TouchableOpacity 
-            style={styles.navItem} 
-            onPress={() => router.push('/home')}
-          >
-            <FontAwesomeIcon name="home" size={24} color="#FE7F2D" />
-            <Text style={[styles.navText, styles.defaultFont]}>Home</Text>
-          </TouchableOpacity>
+        <View style={[
+          styles.inputWrapper,
+          { bottom: keyboardVisible ? 0 : 70 }
+        ]}>
+          <View style={styles.inputContainer}>
+            <View style={styles.inputSection}>
+              <View style={styles.chatboxContainer}>
+                <TextInput
+                  style={[
+                    styles.input, 
+                    styles.defaultFont, 
+                    { height: Math.max(16, inputHeight) },
+                    isAIResponding && styles.disabledInput
+                  ]}
+                  placeholder={isAIResponding ? "BiteAI is responding..." : "Type your message..."}
+                  placeholderTextColor="#999"
+                  multiline
+                  value={message}
+                  onChangeText={setMessage}
+                  onContentSizeChange={(event) => {
+                    const height = event.nativeEvent.contentSize.height;
+                    const newHeight = Math.max(16, Math.ceil(height));
+                    setInputHeight(newHeight);
+                  }}
+                  onSubmitEditing={handleSend}
+                  editable={!isAIResponding}
+                />
+                <View style={styles.mediaButtons}>
+                  <TouchableOpacity 
+                    style={[styles.mediaButton, isAIResponding && styles.disabledButton]}
+                    onPress={() => pickImage('camera')}
+                    disabled={isAIResponding}
+                  >
+                    <FontAwesomeIcon name="camera" size={16} color={isAIResponding ? "#ccc" : "#FE7F2D"} />
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.mediaButton, isAIResponding && styles.disabledButton]}
+                    onPress={() => pickImage('gallery')}
+                    disabled={isAIResponding}
+                  >
+                    <FontAwesomeIcon name="image" size={16} color={isAIResponding ? "#ccc" : "#FE7F2D"} />
+                  </TouchableOpacity>
+                </View>
+              </View>
 
-          <TouchableOpacity 
-            style={styles.navItem} 
-            onPress={() => router.push('/chat')}
-          >
-            <View style={styles.glowContainer}>
-              <FontAwesome6Icon name="brain" size={24} color="#FE7F2D" style={styles.glowIcon} />
+              <TouchableOpacity 
+                style={[styles.sendButton, isAIResponding && styles.disabledButton]}
+                onPress={handleSend}
+                disabled={isAIResponding}
+              >
+                <Icon name="send" size={16} color={isAIResponding ? "#ccc" : "#fff"} />
+              </TouchableOpacity>
             </View>
-            <Text style={[styles.navText, styles.defaultFont]}>Chat</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.navItem} 
-            onPress={() => router.push('/budget')}
-          >
-            <FontAwesome6Icon name="money-bills" size={24} color="#FE7F2D" />
-            <Text style={[styles.navText, styles.defaultFont]}>Budget</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.navItem} 
-            onPress={() => router.push('/profile')}
-          >
-            <MaterialCommunityIcons name="account-settings" size={24} color="#FE7F2D" />
-            <Text style={[styles.navText, styles.defaultFont]}>Profile</Text>
-          </TouchableOpacity>
+          </View>
         </View>
+
+        {!keyboardVisible && (
+          <View style={styles.navContainer}>
+            <View style={styles.navigation}>
+              <TouchableOpacity 
+                style={styles.navItem} 
+                onPress={() => router.push('/home')}
+              >
+                <FontAwesomeIcon name="home" size={24} color="#FE7F2D" />
+                <Text style={[styles.navText, styles.defaultFont]}>Home</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.navItem} 
+                onPress={() => router.push('/chat')}
+              >
+                <View style={styles.glowContainer}>
+                  <FontAwesome6Icon name="brain" size={24} color="#FE7F2D" style={styles.glowIcon} />
+                </View>
+                <Text style={[styles.navText, styles.defaultFont]}>Chat</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.navItem} 
+                onPress={() => router.push('/budget')}
+              >
+                <FontAwesome6Icon name="money-bills" size={24} color="#FE7F2D" />
+                <Text style={[styles.navText, styles.defaultFont]}>Budget</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.navItem} 
+                onPress={() => router.push('/profile')}
+              >
+                <MaterialCommunityIcons name="account-settings" size={24} color="#FE7F2D" />
+                <Text style={[styles.navText, styles.defaultFont]}>Profile</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -895,20 +1079,21 @@ const styles = StyleSheet.create({
   },
   inputWrapper: {
     position: 'absolute',
-    bottom: 70,
     left: 0,
     right: 0,
-    backgroundColor: '#00272B',
+    backgroundColor: 'transparent',
     paddingTop: 8,
     height: 'auto',
     minHeight: 60,
     justifyContent: 'center',
+    zIndex: 5,
   },
   inputContainer: {
     paddingHorizontal: 16,
     paddingBottom: 8,
     height: 'auto',
     minHeight: 48,
+    backgroundColor: 'transparent',
   },
   inputSection: {
     flexDirection: 'row',
@@ -974,6 +1159,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 1,
+    zIndex: 10,
   },
   navigation: {
     flexDirection: 'row',
@@ -1132,15 +1318,40 @@ const styles = StyleSheet.create({
     marginHorizontal: 2,
   },
   saveRecipeInlineButton: {
-    marginTop: 8,
-    alignSelf: 'flex-end',
     backgroundColor: '#FE7F2D',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
   saveRecipeInlineButtonText: {
     color: '#fff',
+    fontSize: 13,
+    fontFamily: 'IstokWeb-Regular',
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  recipeActionBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
+  },
+  recipeActionBarLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  recipeTimeStamp: {
+    color: 'rgba(255,255,255,0.6)',
     fontSize: 12,
     fontFamily: 'IstokWeb-Regular',
   }

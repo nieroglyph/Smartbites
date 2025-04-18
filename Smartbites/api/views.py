@@ -341,3 +341,26 @@ def update_user_profile(request):
     from .serializers import UserProfileSerializer
     serializer = UserProfileSerializer(profile)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+# multiple recipes
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from .models import Recipe
+from .serializers import RecipeSerializer
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def save_recipe(request):
+    serializer = RecipeSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save(user=request.user)
+        return Response({'status': 'success', 'recipe': serializer.data})
+    return Response({'status': 'error', 'errors': serializer.errors}, status=400)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_recipes(request):
+    recipes = Recipe.objects.filter(user=request.user).order_by('-created_at')
+    serializer = RecipeSerializer(recipes, many=True)
+    return Response({'recipes': serializer.data})

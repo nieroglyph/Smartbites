@@ -48,7 +48,7 @@ const HomeScreen = () => {
 
     try {
       const res = await fetch(
-        `http://192.168.100.10:8000/api/update-recipe/${editingRecipe.id}/`,
+        `http://192.168.1.9:8000/api/update-recipe/${editingRecipe.id}/`,
         {
           method: "PUT",
           headers: {
@@ -86,7 +86,7 @@ const HomeScreen = () => {
 
     try {
       const res = await fetch(
-        `http://192.168.100.10:8000/api/delete-recipe/${id}/`,
+        `http://192.168.1.9:8000/api/delete-recipe/${id}/`,
         {
           method: "DELETE",
           headers: {
