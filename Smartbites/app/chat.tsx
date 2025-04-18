@@ -9,15 +9,8 @@ import {
   ScrollView,
   Alert,
   Platform,
-  Animated,
-  ActionSheetIOS,
-  Modal,
-  TouchableWithoutFeedback,
-  LayoutRectangle,
-  KeyboardAvoidingView,
-  Keyboard
+  Animated
 } from 'react-native';
-import { BlurView } from 'expo-blur';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import FontAwesomeIcon from 'react-native-vector-icons/FontAwesome';
 import FontAwesome6Icon from 'react-native-vector-icons/FontAwesome6';
@@ -36,17 +29,10 @@ interface Message {
   image?: string;
 }
 
-interface ChatBubbleProps {
-  message: Message;
-  isUser: boolean;
-  onDelete: (id: number) => void;
-  onSaveRecipe: (message: Message) => void;
-}
-
 const ThinkingDots = () => {
-  const dot1 = useRef(new Animated.Value(0)).current;
-  const dot2 = useRef(new Animated.Value(0)).current;
-  const dot3 = useRef(new Animated.Value(0)).current;
+  const dot1 = useRef(new Animated.Value(0.3)).current;
+  const dot2 = useRef(new Animated.Value(0.3)).current;
+  const dot3 = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
     const pulseInDuration = 250;
@@ -131,222 +117,6 @@ const ThinkingDots = () => {
   );
 };
 
-const ChatBubble = ({ message, isUser, onDelete, onSaveRecipe }: ChatBubbleProps) => {
-  const [isPressed, setIsPressed] = useState(false);
-  const [showActionSheet, setShowActionSheet] = useState(false);
-  const [bubbleLayout, setBubbleLayout] = useState<LayoutRectangle | null>(null);
-
-  const bubbleRef = useRef<View>(null);
-
-  const handleLongPress = () => {
-    bubbleRef.current?.measureInWindow((x: number, y: number, width: number, height: number) => {
-      setBubbleLayout({ x, y, width, height });
-      setIsPressed(true);
-
-      if (Platform.OS === 'ios') {
-        ActionSheetIOS.showActionSheetWithOptions(
-          {
-            options: [!isUser ? 'Save Recipe' : '', 'Delete'].filter(Boolean),
-            destructiveButtonIndex: 1,
-            userInterfaceStyle: 'dark',
-          },
-          (buttonIndex) => {
-            setIsPressed(false);
-            if (buttonIndex === 0 && !isUser) {
-              onSaveRecipe(message);
-            } else if (buttonIndex === 1) {
-              onDelete(message.id);
-            }
-          }
-        );
-      } else {
-        setShowActionSheet(true);
-      }
-    });
-  };
-
-  const handlePressOut = () => {
-    if (!showActionSheet) {
-      setIsPressed(false);
-    }
-  };
-
-  const renderBubbleContent = () => (
-    <View style={isUser ? styles.userMessage : styles.aiMessage}>
-      {message.image && (
-        <Image
-          source={{ uri: message.image }}
-          style={styles.messageImage}
-          resizeMode="cover"
-        />
-      )}
-      {message.text === '###THINKING_ANIMATION###' ? (
-        <View style={styles.thinkingMessageContainer}>
-          <ThinkingDots />
-        </View>
-      ) : (
-        <FormattedText text={message.text} />
-      )}
-      <Text style={[styles.messageTime, styles.defaultFont]}>
-        {message.time}
-      </Text>
-    </View>
-  );
-
-  return (
-    <>
-      <TouchableOpacity
-        activeOpacity={1}
-        onLongPress={handleLongPress}
-        onPressOut={handlePressOut}
-        delayLongPress={300}
-      >
-        <View
-          ref={bubbleRef}
-          onLayout={() => {}}
-          style={isPressed ? { opacity: 0 } : {}}
-        >
-          {renderBubbleContent()}
-        </View>
-      </TouchableOpacity>
-
-      <Modal
-        visible={showActionSheet}
-        transparent
-        animationType="fade"
-        onRequestClose={() => {
-          setShowActionSheet(false);
-          setIsPressed(false);
-        }}
-      >
-        <TouchableWithoutFeedback
-          onPress={() => {
-            setShowActionSheet(false);
-            setIsPressed(false);
-          }}
-        >
-          <View style={StyleSheet.absoluteFill}>
-            <BlurView
-              style={StyleSheet.absoluteFill}
-              tint="dark"
-              intensity={90}
-            />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.6)' }]} />
-          </View>
-        </TouchableWithoutFeedback>
-
-        {bubbleLayout && (
-          <View
-            style={{
-              position: 'absolute',
-              top: bubbleLayout.y,
-              left: bubbleLayout.x,
-              width: bubbleLayout.width,
-              height: bubbleLayout.height,
-              zIndex: 10,
-            }}
-          >
-            {renderBubbleContent()}
-          </View>
-        )}
-
-        <View style={styles.actionSheetContainer}>
-          {!isUser && (
-            <>
-              <TouchableOpacity
-                style={styles.actionSheetButton}
-                onPress={() => {
-                  onSaveRecipe(message);
-                  setShowActionSheet(false);
-                  setIsPressed(false);
-                }}
-              >
-                <Text style={styles.actionSheetText}>Save Recipe</Text>
-              </TouchableOpacity>
-              <View style={styles.separator} />
-            </>
-          )}
-
-          <TouchableOpacity
-            style={[styles.actionSheetButton, styles.deleteButton]}
-            onPress={() => {
-              onDelete(message.id);
-              setShowActionSheet(false);
-                  setIsPressed(false);
-                }}
-              >
-                <Text style={[styles.actionSheetText, styles.deleteText]}>Delete</Text>
-              </TouchableOpacity>
-            </View>
-          </Modal>
-        </>
-      );
-    };
-
-const FormattedText = ({ text }: { text: string }) => {
-  const elements: JSX.Element[] = [];
-  let keyIndex = 0;
-
-  text.split('\n\n').forEach((paragraph, pIndex) => {
-    paragraph.split('\n').forEach((line, lIndex) => {
-      const lineElements: JSX.Element[] = [];
-      let remaining = line.trim();
-      let hasBullet = false;
-
-      if (remaining.startsWith('* ')) {
-        hasBullet = true;
-        remaining = remaining.substring(2).trim();
-      }
-
-      while (remaining.includes('**')) {
-        const parts = remaining.split('**');
-        const before = parts[0];
-        const boldContent = parts[1] || '';
-        remaining = parts.slice(2).join('**');
-
-        if (before) {
-          lineElements.push(
-            <Text key={`text-${keyIndex++}`} style={[styles.messageText, styles.defaultFont]}>
-              {before}
-            </Text>
-          );
-        }
-        
-        if (boldContent) {
-          lineElements.push(
-            <Text key={`bold-${keyIndex++}`} style={[styles.messageText, styles.defaultFont, { fontWeight: '700' }]}>
-              {boldContent}
-            </Text>
-          );
-        }
-      }
-
-      if (remaining) {
-        lineElements.push(
-          <Text key={`remaining-${keyIndex++}`} style={[styles.messageText, styles.defaultFont]}>
-            {remaining}
-          </Text>
-        );
-      }
-
-      elements.push(
-        <View key={`line-${pIndex}-${lIndex}`} style={styles.lineContainer}>
-          {hasBullet && <Text style={[styles.messageText, styles.defaultFont, { color: '#FE7F2D', marginRight: 8 }]}>•</Text>}
-          <Text style={styles.lineText}>
-            {lineElements}
-          </Text>
-        </View>
-      );
-    });
-
-    if (pIndex < text.split('\n\n').length - 1) {
-      elements.push(<View key={`space-${pIndex}`} style={{ height: 12 }} />);
-    }
-  });
-
-  return <View style={styles.textContainer}>{elements}</View>;
-};
-
 const ChatScreen = () => {
   const router = useRouter();
   const [message, setMessage] = useState('');
@@ -366,7 +136,6 @@ const ChatScreen = () => {
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
   const [inputHeight, setInputHeight] = useState(16);
   const [isAIResponding, setIsAIResponding] = useState(false);
-  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
   const responseInterval = useRef<NodeJS.Timeout | null>(null);
   
   const [cameraPermission, requestPermission] = useCameraPermissions();
@@ -376,26 +145,6 @@ const ChatScreen = () => {
   const [fontsLoaded] = useFonts({
     'IstokWeb-Regular': require('../assets/fonts/IstokWeb-Regular.ttf'),
   });
-
-  useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener(
-      'keyboardDidShow',
-      () => {
-        setKeyboardVisible(true);
-      }
-    );
-    const keyboardDidHideListener = Keyboard.addListener(
-      'keyboardDidHide',
-      () => {
-        setKeyboardVisible(false);
-      }
-    );
-
-    return () => {
-      keyboardDidShowListener.remove();
-      keyboardDidHideListener.remove();
-    };
-  }, []);
 
   const clearChat = () => {
     Alert.alert(
@@ -409,11 +158,14 @@ const ChatScreen = () => {
         { 
           text: "Clear", 
           onPress: () => {
+            // Clear any ongoing response interval
             if (responseInterval.current) {
               clearInterval(responseInterval.current);
               responseInterval.current = null;
             }
+            // Stop AI response
             setIsAIResponding(false);
+            // Reset to initial state
             setMessages([{
               id: 1,
               text: "Hello! I'm your SmartBites assistant. How can I help you today?",
@@ -426,12 +178,9 @@ const ChatScreen = () => {
     );
   };
 
-  const handleDeleteMessage = (id: number) => {
-    setMessages(prev => prev.filter(msg => msg.id !== id));
-  };
-
   useEffect(() => {
     return () => {
+      // Clean up interval when component unmounts
       if (responseInterval.current) {
         clearInterval(responseInterval.current);
       }
@@ -454,6 +203,70 @@ const ChatScreen = () => {
     })();
   }, []);
 
+  const FormattedText = ({ text }: { text: string }) => {
+    const elements: JSX.Element[] = [];
+    let keyIndex = 0;
+  
+    text.split('\n\n').forEach((paragraph, pIndex) => {
+      paragraph.split('\n').forEach((line, lIndex) => {
+        const lineElements: JSX.Element[] = [];
+        let remaining = line.trim();
+        let hasBullet = false;
+  
+        if (remaining.startsWith('* ')) {
+          hasBullet = true;
+          remaining = remaining.substring(2).trim();
+        }
+  
+        while (remaining.includes('**')) {
+          const parts = remaining.split('**');
+          const before = parts[0];
+          const boldContent = parts[1] || '';
+          remaining = parts.slice(2).join('**');
+  
+          if (before) {
+            lineElements.push(
+              <Text key={`text-${keyIndex++}`} style={[styles.messageText, styles.defaultFont]}>
+                {before}
+              </Text>
+            );
+          }
+          
+          if (boldContent) {
+            lineElements.push(
+              <Text key={`bold-${keyIndex++}`} style={[styles.messageText, styles.defaultFont, { fontWeight: '700' }]}>
+                {boldContent}
+              </Text>
+            );
+          }
+        }
+  
+        if (remaining) {
+          lineElements.push(
+            <Text key={`remaining-${keyIndex++}`} style={[styles.messageText, styles.defaultFont]}>
+              {remaining}
+            </Text>
+          );
+        }
+  
+        elements.push(
+          <View key={`line-${pIndex}-${lIndex}`} style={styles.lineContainer}>
+            {hasBullet && <Text style={[styles.messageText, styles.defaultFont, { color: '#FE7F2D', marginRight: 8 }]}>•</Text>}
+            <Text style={styles.lineText}>
+              {lineElements}
+            </Text>
+          </View>
+        );
+      });
+  
+      if (pIndex < text.split('\n\n').length - 1) {
+        elements.push(<View key={`space-${pIndex}`} style={{ height: 12 }} />);
+      }
+    });
+  
+    return <View style={styles.textContainer}>{elements}</View>;
+  };
+  
   const handleSend = async () => {
     if ((message.trim() || photoPreview) && !isAIResponding) {
       const newUserMessage: Message = {
@@ -499,7 +312,7 @@ const ChatScreen = () => {
           Alert.alert("Error", "Not authenticated");
           return false;
         }
-        const response = await fetch('http://192.168.1.9:8000/api/query-ollama/', {
+        const response = await fetch('http://192.168.100.10:8000/api/query-ollama/', {
           method: 'POST',
           headers: { 'Content-Type': 'multipart/form-data',
                      'Authorization': `Token ${token}`
@@ -519,6 +332,7 @@ const ChatScreen = () => {
           prev.map(msg => (msg.id === thinkingMessage.id ? { ...msg, text: '' } : msg))
         );
   
+        // Store interval reference
         responseInterval.current = setInterval(() => {
           if (index < fullResponse.length) {
             currentText += fullResponse[index];
@@ -537,18 +351,10 @@ const ChatScreen = () => {
             setIsAIResponding(false);
           }
         }, 30);
+  
       } catch (error) {
         console.error('Error fetching AI response:', error);
-        
-        setMessages(prev => prev.filter(msg => msg.id !== thinkingMessage.id));
-  
-        setMessages(prev => [...prev, {
-          id: Date.now(),
-          text: "I'm sorry, BiteAI is currently down. Please try again later.",
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          isUser: false
-        }]);
-        
+        Alert.alert('Error', 'Failed to communicate with AI.');
         setIsAIResponding(false);
         if (responseInterval.current) {
           clearInterval(responseInterval.current);
@@ -570,7 +376,7 @@ const ChatScreen = () => {
         Alert.alert("Error", "Not authenticated");
         return false;
       }
-      const response = await fetch("http://192.168.1.9:8000/api/save-recipe/", {
+      const response = await fetch("http://192.168.100.10:8000/api/save-recipe/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -628,6 +434,7 @@ const ChatScreen = () => {
   }  
 
   const handleSaveRecipe = async (recipeMsg: Message) => {
+    // Parse the AI response to extract structured recipe info.
     const { title, ingredients, instructions, cost } = parseRecipe(recipeMsg.text);
     
     const recipeData = {
@@ -832,172 +639,178 @@ const ChatScreen = () => {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={styles.container}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
-    >
-      <View style={styles.container}>
-        {/* Logo and Clear Button */}
-        <View style={styles.logoContainer}>
-          <Image
-            source={require('../assets/images/logo/smartbites-high-resolution-logo-transparent.png')}
-            style={styles.logo}
+    <View style={styles.container}>
+      {/* Header with logo and clear chat button */}
+      <View style={styles.logoContainer}>
+        <Image
+          source={require('../assets/images/logo/smartbites-high-resolution-logo-transparent.png')}
+          style={styles.logo}
+        />
+        <TouchableOpacity 
+          style={styles.clearButton}
+          onPress={clearChat}
+        >
+          <Icon name="delete" size={24} color="#FE7F2D" />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.chatArea}>
+      <ScrollView 
+        ref={scrollViewRef}
+        style={styles.chatContent}
+        contentContainerStyle={styles.chatContentContainer}
+        onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+      >
+        {messages.map((msg) => (
+          <View 
+            key={msg.id} 
+            style={[
+              msg.isUser ? styles.userMessageContainer : styles.aiMessageContainer,
+              { marginBottom: 16 }
+            ]}
+          >
+            <View style={msg.isUser ? styles.userMessage : styles.aiMessage}>
+              {msg.image && (
+                <Image 
+                  source={{ uri: msg.image }} 
+                  style={styles.messageImage}
+                  resizeMode="cover"
+                  onError={(e) => console.log('Image load error:', e.nativeEvent.error)}
+                />
+              )}
+              {msg.text === '###THINKING_ANIMATION###' ? (
+                  <View style={styles.thinkingMessageContainer}>
+                    <ThinkingDots />
+                  </View>
+                ) : msg.text ? (
+                  <Text style={[styles.messageText, styles.defaultFont]}>
+                    <FormattedText text={msg.text} />
+                  </Text>
+                ) : null}
+              <Text style={[styles.messageTime, styles.defaultFont]}>{msg.time}</Text>
+              {/* If this is an AI message, show an inline Save Recipe button */}
+              {!msg.isUser && (
+                <TouchableOpacity 
+                  style={styles.saveRecipeInlineButton} 
+                  onPress={() => handleSaveRecipe(msg)}
+                >
+                  <Text style={styles.saveRecipeInlineButtonText}>Save Recipe</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        ))}
+      </ScrollView>
+
+      </View>
+
+      {photoPreview && (
+        <View style={styles.photoPreviewContainer}>
+          <Image 
+            source={{ uri: photoPreview }} 
+            style={styles.photoPreviewImage}
+            resizeMode="cover"
           />
           <TouchableOpacity 
-            style={styles.clearButton}
-            onPress={clearChat}
+            style={styles.removePhotoButton}
+            onPress={removePhotoPreview}
           >
-            <Icon name="delete" size={24} color="#FE7F2D" />
+            <Icon name="close" size={20} color="white" />
           </TouchableOpacity>
         </View>
+      )}
 
-        {/* Chat Area */}
-        <View style={[styles.chatArea]}>
-          <ScrollView 
-            ref={scrollViewRef}
-            style={styles.chatContent}
-            contentContainerStyle={styles.chatContentContainer}
-            onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
-          >
-            {messages.map((msg) => (
-              <View 
-                key={msg.id} 
+      <View style={styles.inputWrapper}>
+        <View style={styles.inputContainer}>
+          <View style={styles.inputSection}>
+            <View style={styles.chatboxContainer}>
+              <TextInput
                 style={[
-                  msg.isUser ? styles.userMessageContainer : styles.aiMessageContainer,
-                  { marginBottom: 16 }
+                  styles.input, 
+                  styles.defaultFont, 
+                  { height: Math.max(16, inputHeight) },
+                  isAIResponding && styles.disabledInput
                 ]}
-              >
-                <ChatBubble
-                  message={msg}
-                  isUser={msg.isUser}
-                  onDelete={handleDeleteMessage}
-                  onSaveRecipe={handleSaveRecipe}
-                />
+                placeholder={isAIResponding ? "AI is responding..." : "Type your message..."}
+                placeholderTextColor="#999"
+                multiline
+                value={message}
+                onChangeText={setMessage}
+                onContentSizeChange={(event) => {
+                  const height = event.nativeEvent.contentSize.height;
+                  const newHeight = Math.max(16, Math.ceil(height));
+                  setInputHeight(newHeight);
+                }}
+                onSubmitEditing={handleSend}
+                editable={!isAIResponding}
+              />
+              <View style={styles.mediaButtons}>
+                <TouchableOpacity 
+                  style={[styles.mediaButton, isAIResponding && styles.disabledButton]}
+                  onPress={() => pickImage('camera')}
+                  disabled={isAIResponding}
+                >
+                  <FontAwesomeIcon name="camera" size={16} color={isAIResponding ? "#ccc" : "#FE7F2D"} />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.mediaButton, isAIResponding && styles.disabledButton]}
+                  onPress={() => pickImage('gallery')}
+                  disabled={isAIResponding}
+                >
+                  <FontAwesomeIcon name="image" size={16} color={isAIResponding ? "#ccc" : "#FE7F2D"} />
+                </TouchableOpacity>
               </View>
-            ))}
-          </ScrollView>
-        </View>
+            </View>
 
-        {/* Photo Preview */}
-        {photoPreview && (
-          <View style={[
-            styles.photoPreviewContainer,
-            isKeyboardVisible && { bottom: 70 }
-          ]}>
-            <Image 
-              source={{ uri: photoPreview }} 
-              style={styles.photoPreviewImage}
-              resizeMode="cover"
-            />
             <TouchableOpacity 
-              style={styles.removePhotoButton}
-              onPress={removePhotoPreview}
+              style={[styles.sendButton, isAIResponding && styles.disabledButton]}
+              onPress={handleSend}
+              disabled={isAIResponding}
             >
-              <Icon name="close" size={20} color="white" />
+              <Icon name="send" size={16} color={isAIResponding ? "#ccc" : "#fff"} />
             </TouchableOpacity>
           </View>
-        )}
-
-        {/* Input Box - Updated positioning */}
-        <View style={[
-          styles.inputWrapper,
-          { bottom: isKeyboardVisible ? 0 : 70 }
-        ]}>
-          <View style={styles.inputContainer}>
-            <View style={styles.inputSection}>
-              <View style={styles.chatboxContainer}>
-                <TextInput
-                  style={[
-                    styles.input, 
-                    styles.defaultFont, 
-                    { height: Math.max(16, inputHeight) },
-                    isAIResponding && styles.disabledInput
-                  ]}
-                  placeholder={isAIResponding ? "AI is responding..." : "Type your message..."}
-                  placeholderTextColor="#999"
-                  multiline
-                  value={message}
-                  onChangeText={setMessage}
-                  onContentSizeChange={(event) => {
-                    const height = event.nativeEvent.contentSize.height;
-                    const newHeight = Math.max(16, Math.ceil(height));
-                    setInputHeight(newHeight);
-                  }}
-                  onSubmitEditing={handleSend}
-                  editable={!isAIResponding}
-                />
-                <View style={styles.mediaButtons}>
-                  <TouchableOpacity 
-                    style={[styles.mediaButton, isAIResponding && styles.disabledButton]}
-                    onPress={() => pickImage('camera')}
-                    disabled={isAIResponding}
-                  >
-                    <FontAwesomeIcon name="camera" size={16} color={isAIResponding ? "#ccc" : "#FE7F2D"} />
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.mediaButton, isAIResponding && styles.disabledButton]}
-                    onPress={() => pickImage('gallery')}
-                    disabled={isAIResponding}
-                  >
-                    <FontAwesomeIcon name="image" size={16} color={isAIResponding ? "#ccc" : "#FE7F2D"} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <TouchableOpacity 
-                style={[styles.sendButton, isAIResponding && styles.disabledButton]}
-                onPress={handleSend}
-                disabled={isAIResponding}
-              >
-                <Icon name="send" size={16} color={isAIResponding ? "#ccc" : "#fff"} />
-              </TouchableOpacity>
-            </View>
-          </View>
         </View>
-
-        {/* Navigation Bar - Updated with visibility control */}
-        {!isKeyboardVisible && (
-          <View style={styles.navContainer}>
-            <View style={styles.navigation}>
-              <TouchableOpacity 
-                style={styles.navItem} 
-                onPress={() => router.push('/home')}
-              >
-                <FontAwesomeIcon name="home" size={24} color="#FE7F2D" />
-                <Text style={[styles.navText, styles.defaultFont]}>Home</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.navItem} 
-                onPress={() => router.push('/chat')}
-              >
-                <View style={styles.glowContainer}>
-                  <FontAwesome6Icon name="brain" size={24} color="#FE7F2D" style={styles.glowIcon} />
-                </View>
-                <Text style={[styles.navText, styles.defaultFont]}>Chat</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.navItem} 
-                onPress={() => router.push('/budget')}
-              >
-                <FontAwesome6Icon name="money-bills" size={24} color="#FE7F2D" />
-                <Text style={[styles.navText, styles.defaultFont]}>Budget</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.navItem} 
-                onPress={() => router.push('/profile')}
-              >
-                <MaterialCommunityIcons name="account-settings" size={24} color="#FE7F2D" />
-                <Text style={[styles.navText, styles.defaultFont]}>Profile</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
       </View>
-    </KeyboardAvoidingView>
+
+      <View style={styles.navContainer}>
+        <View style={styles.navigation}>
+          <TouchableOpacity 
+            style={styles.navItem} 
+            onPress={() => router.push('/home')}
+          >
+            <FontAwesomeIcon name="home" size={24} color="#FE7F2D" />
+            <Text style={[styles.navText, styles.defaultFont]}>Home</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.navItem} 
+            onPress={() => router.push('/chat')}
+          >
+            <View style={styles.glowContainer}>
+              <FontAwesome6Icon name="brain" size={24} color="#FE7F2D" style={styles.glowIcon} />
+            </View>
+            <Text style={[styles.navText, styles.defaultFont]}>Chat</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.navItem} 
+            onPress={() => router.push('/budget')}
+          >
+            <FontAwesome6Icon name="money-bills" size={24} color="#FE7F2D" />
+            <Text style={[styles.navText, styles.defaultFont]}>Budget</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.navItem} 
+            onPress={() => router.push('/profile')}
+          >
+            <MaterialCommunityIcons name="account-settings" size={24} color="#FE7F2D" />
+            <Text style={[styles.navText, styles.defaultFont]}>Profile</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
   );
 };
 
@@ -1025,7 +838,7 @@ const styles = StyleSheet.create({
   chatArea: {
     flex: 1,
     marginTop: 10,
-    paddingBottom: 100, // Changed to paddingBottom
+    marginBottom: 100,
   },
   chatContent: {
     flex: 1,
@@ -1036,30 +849,26 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   aiMessageContainer: {
-    alignSelf: 'flex-start',
-    maxWidth: '80%',
-    marginBottom: 8,
-    marginRight: '20%',
+    alignItems: 'flex-start',
+    width: '100%',
   },
   userMessageContainer: {
-    alignSelf: 'flex-end',
-    maxWidth: '80%',
-    marginBottom: 8,
-    marginLeft: '20%',
+    alignItems: 'flex-end',
+    width: '100%',
   },
   aiMessage: {
     backgroundColor: 'rgba(254, 127, 45, 0.1)',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 18,
-    borderBottomLeftRadius: 4,
+    padding: 12,
+    borderRadius: 16,
+    borderTopLeftRadius: 4,
+    maxWidth: '80%',
   },
   userMessage: {
     backgroundColor: 'rgba(254, 127, 45, 0.3)',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 18,
-    borderBottomRightRadius: 4,
+    padding: 12,
+    borderRadius: 16,
+    borderTopRightRadius: 4,
+    maxWidth: '80%',
   },
   messageText: {
     color: '#fff',
@@ -1070,7 +879,7 @@ const styles = StyleSheet.create({
   },
   messageTime: {
     color: 'rgba(255, 255, 255, 0.6)',
-    fontSize: 11,
+    fontSize: 12,
     marginTop: 4,
     alignSelf: 'flex-end',
   },
@@ -1086,21 +895,20 @@ const styles = StyleSheet.create({
   },
   inputWrapper: {
     position: 'absolute',
+    bottom: 70,
     left: 0,
     right: 0,
-    backgroundColor: 'transparent',
+    backgroundColor: '#00272B',
     paddingTop: 8,
     height: 'auto',
     minHeight: 60,
     justifyContent: 'center',
-    zIndex: 5,
   },
   inputContainer: {
     paddingHorizontal: 16,
     paddingBottom: 8,
     height: 'auto',
     minHeight: 48,
-    backgroundColor: 'transparent',
   },
   inputSection: {
     flexDirection: 'row',
@@ -1166,7 +974,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 1,
-    zIndex: 10,
   },
   navigation: {
     flexDirection: 'row',
@@ -1324,41 +1131,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#FE7F2D',
     marginHorizontal: 2,
   },
-  actionSheetContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#002F38',
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-    padding: 10,
-    paddingBottom: 20,
+  saveRecipeInlineButton: {
+    marginTop: 8,
+    alignSelf: 'flex-end',
+    backgroundColor: '#FE7F2D',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 4,
   },
-  actionSheetButton: {
-    paddingVertical: 1,
-    borderBottomWidth: 1,
-    borderBottomColor: 'transparent',
-  },
-  separator: {
-    height: 1,
-    backgroundColor: '#E5E5EA',
-    marginVertical: 8,
-  },
-  actionSheetText: {
-    paddingTop: 10,
-    fontSize: 16,
-    textAlign: 'center',
-    color: '#E0FF4F',
-  },
-  deleteButton: {
-    backgroundColor: '#FF3B30',
-    borderRadius: 10,
-    paddingBottom: 10,
-  },
-  deleteText: {
-    color: 'white',
-  },
+  saveRecipeInlineButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontFamily: 'IstokWeb-Regular',
+  }
 });
 
 export default ChatScreen;
