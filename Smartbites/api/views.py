@@ -158,40 +158,6 @@ def delete_recipe(request, recipe_id):
     except Recipe.DoesNotExist:
         return Response({'error': 'Recipe not found'}, status=status.HTTP_404_NOT_FOUND)
 
-# Nutrition Endpoint
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from .utils import get_nutrition_data
-
-@api_view(['GET'])
-def nutrition_info(request):
-    """API to fetch nutrition info by food name"""
-    food_name = request.GET.get("food", "")
-    if not food_name:
-        return Response({"error": "Food name is required"}, status=400)
-
-    data = get_nutrition_data(food_name)
-    if data:
-        return Response(data)
-    
-    return Response({"error": "No data found"}, status=404)
-
-# Recipe Endpoint
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from .utils import get_recipes
-
-@api_view(['GET'])
-def recipe_search(request):
-    """API to fetch recipes by multiple ingredients"""
-    ingredients = request.GET.getlist("ingredient")  # Accept multiple ingredients
-
-    if not ingredients:
-        return Response({"error": "At least one ingredient is required"}, status=400)
-
-    recipes = get_recipes(ingredients)
-    return Response(recipes)
-
 # ollama - biteai
 from .models import UserProfile
 import requests, json, base64

@@ -9,8 +9,8 @@ admin.site.register(UserProfile)
 from .models import Recipe
 admin.site.register(Recipe)
 
+# User
 from .models import CustomUser
-
 @admin.register(CustomUser)
 class CustomUserAdmin(admin.ModelAdmin):
     list_display = ('email', 'is_staff', 'is_active')  # Customize as needed
