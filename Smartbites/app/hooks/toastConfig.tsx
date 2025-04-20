@@ -9,7 +9,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     margin: 10,
     flexDirection: 'row',
-    alignItems: 'center'
+    alignItems: 'center',
+    zIndex: 9999
   },
   errorToast: {
     backgroundColor: '#FF4444',
@@ -17,7 +18,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     margin: 10,
     flexDirection: 'row',
-    alignItems: 'center'
+    alignItems: 'center',
+    zIndex: 9999
   },
   textContainer: {
     marginLeft: 10
