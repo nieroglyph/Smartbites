@@ -201,11 +201,6 @@ const HomeScreen = () => {
           <Text style={[styles.recentFoodsText, styles.customFont]}>
             Your Saved Recipes
           </Text>
-          {selectedRecipes.length > 0 && (
-            <TouchableOpacity onPress={() => setSelectedRecipes([])}>
-              <Icon name="close" size={24} color="#FE7F2D" />
-            </TouchableOpacity>
-          )}
         </View>
 
         {loading ? (
@@ -384,28 +379,42 @@ const HomeScreen = () => {
         </TouchableWithoutFeedback>
       </Modal>
 
-      {/* Floating Delete Button */}
-      {selectedRecipes.length > 0 && (
-        <TouchableOpacity
-          style={styles.floatingDeleteButton}
-          onPress={deleteSelectedRecipes}
-        >
-          <Text style={styles.deleteButtonText}>
-            Delete ({selectedRecipes.length})
-          </Text>
-        </TouchableOpacity>
-      )}
+      {/* Floating Action Container */}
+      {(selectedRecipes.length > 0 || showUndo) && (
+        <View style={styles.floatingActionContainer}>
+          {/* Undo Toast */}
+          {showUndo && (
+            <View style={styles.undoToast}>
+              <Text style={styles.undoText}>
+                {deletedRecipeIds.length} recipe
+                {deletedRecipeIds.length > 1 ? "s" : ""} deleted
+              </Text>
+              <TouchableOpacity onPress={handleUndo}>
+                <Text style={styles.undoButton}>UNDO</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
-      {/* Undo Toast */}
-      {showUndo && (
-        <View style={styles.undoToast}>
-          <Text style={styles.undoText}>
-            {deletedRecipeIds.length} recipe
-            {deletedRecipeIds.length > 1 ? "s" : ""} deleted
-          </Text>
-          <TouchableOpacity onPress={handleUndo}>
-            <Text style={styles.undoButton}>UNDO</Text>
-          </TouchableOpacity>
+          {/* Delete & Close Buttons */}
+          {selectedRecipes.length > 0 && (
+            <View style={styles.floatingActions}>
+              <TouchableOpacity
+                style={[styles.floatingActionButton, styles.floatingDelete]}
+                onPress={deleteSelectedRecipes}
+              >
+                <Text style={styles.floatingButtonText}>
+                  Delete ({selectedRecipes.length})
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.floatingActionButton, styles.floatingClose]}
+                onPress={() => setSelectedRecipes([])}
+              >
+                <Icon name="close" size={20} color="white" />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       )}
 
@@ -550,13 +559,6 @@ const styles = StyleSheet.create({
     color: "#444",
     marginBottom: 12,
   },
-  deleteButton: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    padding: 4,
-    zIndex: 2,
-  },
   modalOverlay: {
     flex: 1,
     justifyContent: "center",
@@ -676,6 +678,52 @@ const styles = StyleSheet.create({
     color: "#FE7F2D",
     fontWeight: "bold",
     paddingHorizontal: 12,
+  },
+  floatingActionContainer: {
+    position: "absolute",
+    bottom: 100,
+    right: 90,
+    zIndex: 100,
+    alignItems: "flex-end",
+    gap: 10,
+  },
+  floatingActions: {
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "center",
+  },
+  floatingActionButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 25,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  floatingDelete: {
+    backgroundColor: "#E74C3C",
+  },
+  floatingClose: {
+    backgroundColor: "#FE7F2D",
+    padding: 12,
+    borderRadius: 25,
+  },
+  floatingButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  deleteButton: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    padding: 4,
+    zIndex: 2,
   },
 });
 
