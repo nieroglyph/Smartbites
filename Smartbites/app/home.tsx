@@ -379,42 +379,39 @@ const HomeScreen = () => {
         </TouchableWithoutFeedback>
       </Modal>
 
+      {/* Undo Toast */}
+      {showUndo && (
+        <View style={styles.undoToast}>
+          <Text style={styles.undoText}>
+            {deletedRecipeIds.length} recipe
+            {deletedRecipeIds.length > 1 ? "s" : ""} deleted
+          </Text>
+          <TouchableOpacity onPress={handleUndo}>
+            <Text style={styles.undoButton}>UNDO</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Floating Action Container */}
-      {(selectedRecipes.length > 0 || showUndo) && (
+      {selectedRecipes.length > 0 && (
         <View style={styles.floatingActionContainer}>
-          {/* Undo Toast */}
-          {showUndo && (
-            <View style={styles.undoToast}>
-              <Text style={styles.undoText}>
-                {deletedRecipeIds.length} recipe
-                {deletedRecipeIds.length > 1 ? "s" : ""} deleted
+          <View style={styles.floatingActions}>
+            <TouchableOpacity
+              style={[styles.floatingActionButton, styles.floatingDelete]}
+              onPress={deleteSelectedRecipes}
+            >
+              <Text style={styles.floatingButtonText}>
+                Delete ({selectedRecipes.length})
               </Text>
-              <TouchableOpacity onPress={handleUndo}>
-                <Text style={styles.undoButton}>UNDO</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+            </TouchableOpacity>
 
-          {/* Delete & Close Buttons */}
-          {selectedRecipes.length > 0 && (
-            <View style={styles.floatingActions}>
-              <TouchableOpacity
-                style={[styles.floatingActionButton, styles.floatingDelete]}
-                onPress={deleteSelectedRecipes}
-              >
-                <Text style={styles.floatingButtonText}>
-                  Delete ({selectedRecipes.length})
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.floatingActionButton, styles.floatingClose]}
-                onPress={() => setSelectedRecipes([])}
-              >
-                <Icon name="close" size={20} color="white" />
-              </TouchableOpacity>
-            </View>
-          )}
+            <TouchableOpacity
+              style={[styles.floatingActionButton, styles.floatingClose]}
+              onPress={() => setSelectedRecipes([])}
+            >
+              <Icon name="close" size={20} color="white" />
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
@@ -659,7 +656,7 @@ const styles = StyleSheet.create({
   },
   undoToast: {
     position: "absolute",
-    bottom: 20,
+    bottom: 80,
     zIndex: 100,
     left: 20,
     right: 20,
