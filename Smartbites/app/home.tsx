@@ -11,6 +11,7 @@ import {
   Modal,
   TouchableWithoutFeedback,
   TextInput,
+  RefreshControl,
 } from "react-native";
 import { useFonts } from "expo-font";
 import { useRouter } from "expo-router";
@@ -35,7 +36,17 @@ const HomeScreen = () => {
   const [editedIngredients, setEditedIngredients] = useState("");
   const [editedInstructions, setEditedInstructions] = useState("");
   const [editedCost, setEditedCost] = useState("");
+  const [isRefreshing, setIsRefreshing] = useState(false);
   if (!fontsLoaded) return null;
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refresh();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const updateRecipe = async () => {
     if (!editingRecipe) return;
@@ -122,9 +133,6 @@ const HomeScreen = () => {
           <Text style={[styles.recentFoodsText, styles.customFont]}>
             Your Saved Recipes
           </Text>
-          <TouchableOpacity onPress={refresh} style={{ marginLeft: 8 }}>
-            <Icon name="refresh" size={20} color="#FE7F2D" />
-          </TouchableOpacity>
         </View>
 
         {loading ? (
@@ -138,7 +146,17 @@ const HomeScreen = () => {
         ) : recipes.length === 0 ? (
           <Text style={styles.emptyText}>No recipes saved yet.</Text>
         ) : (
-          <ScrollView contentContainerStyle={styles.scrollContent}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={handleRefresh}
+                colors={["#FE7F2D"]} // Match your theme color
+                tintColor="#FE7F2D"
+              />
+            }
+          >
             {recipes.map((r: Recipe) => {
               const isExpanded = expandedId === r.id;
               const costNum =
@@ -357,9 +375,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 10,
+    gap: 8
   },
   recentFoodsText: { fontSize: 16, color: "#2E2E2E" },
-  scrollContent: { paddingTop: 10 },
+  scrollContent: { 
+    paddingTop: 10,
+    minHeight: '100%', // Ensures ScrollView is always scrollable
+  },
   foodItem: {
     backgroundColor: "#FBFCF8",
     marginBottom: 12,
