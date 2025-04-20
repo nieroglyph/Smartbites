@@ -24,10 +24,11 @@ import { useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BlurView } from "expo-blur";
 import { useRef } from "react";
+import Toast from "react-native-toast-message";
 
 const HomeScreen = () => {
   const router = useRouter();
-  const { recipes, loading, error, refresh } = useUserRecipes();
+  const { recipes, loading, error, refresh, setRecipes } = useUserRecipes();
   const [fontsLoaded] = useFonts({
     "IstokWeb-Regular": require("../assets/fonts/IstokWeb-Regular.ttf"),
   });
@@ -39,9 +40,10 @@ const HomeScreen = () => {
   const [editedCost, setEditedCost] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedRecipes, setSelectedRecipes] = useState<number[]>([]);
-  const [deletedRecipes, setDeletedRecipes] = useState<Recipe[]>([]);
   const [showUndo, setShowUndo] = useState(false);
-  let deletionTimeout = useRef<NodeJS.Timeout | null>(null);
+  const [deletedRecipeIds, setDeletedRecipeIds] = useState<number[]>([]);
+  const [deletedRecipes, setDeletedRecipes] = useState<Recipe[]>([]); // Add this
+  const deletionTimeout = useRef<NodeJS.Timeout | null>(null);
 
   if (!fontsLoaded) return null;
 
@@ -90,78 +92,86 @@ const HomeScreen = () => {
         throw new Error(errorData.error || "Update failed");
       }
 
-      Alert.alert("Updated!", "Recipe updated successfully.");
+      Toast.show({
+        type: "success",
+        text1: "Updated!",
+        text2: "Recipe updated successfully",
+      });
       refresh();
       setEditingRecipe(null);
     } catch (e: any) {
-      Alert.alert("Error", e.message || "Network request failed");
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: e.message || "Network request failed",
+      });
     }
   };
 
-  const deleteRecipe = async (id: number) => {
-    const token = await AsyncStorage.getItem("authToken");
-    if (!token) {
-      Alert.alert("Not authenticated");
-      return;
-    }
-
-    try {
-      const res = await fetch(
-        `http://192.168.100.10:8000/api/delete-recipe/${id}/`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Token ${token}`,
-          },
-        }
-      );
-
-      if (res.status === 204) {
-        Alert.alert("Deleted!", "Recipe removed successfully.");
-        refresh();
-      } else {
-        const errorData = await res.json();
-        throw new Error(errorData.error || "Delete failed");
-      }
-    } catch (e: any) {
-      Alert.alert("Error", e.message || "Network request failed");
-    }
-  };
-
-  // Add bulk delete function
-  const deleteSelectedRecipes = async () => {
-    if (selectedRecipes.length === 0) return;
-  
-    const toDelete = recipes.filter((r) => selectedRecipes.includes(r.id));
-    setDeletedRecipes(toDelete);
+  const handleDelete = (ids: number[]) => {
+    const deletedItems = recipes.filter((r) => ids.includes(r.id));
+    setDeletedRecipeIds(ids); // For UI display
+    setDeletedRecipes(deletedItems); // For potential restoration
     setShowUndo(true);
-  
+    setRecipes((prev) => prev.filter((r) => !ids.includes(r.id)));
+
     deletionTimeout.current = setTimeout(async () => {
       try {
         const token = await AsyncStorage.getItem("authToken");
         if (!token) throw new Error("Not authenticated");
-  
-        const response = await fetch("http://192.168.100.10:8000/api/delete-multiple-recipes/", {
-          method: "POST",
-          headers: {
-            Authorization: `Token ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ recipe_ids: selectedRecipes }),
-        });
-  
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+
+        if (ids.length === 1) {
+          // Single delete
+          await fetch(
+            `http://192.168.100.10:8000/api/delete-recipe/${ids[0]}/`,
+            {
+              method: "DELETE",
+              headers: { Authorization: `Token ${token}` },
+            }
+          );
+        } else {
+          // Bulk delete
+          await fetch(
+            "http://192.168.100.10:8000/api/delete-multiple-recipes/",
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Token ${token}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ recipe_ids: ids }),
+            }
+          );
         }
 
-        await refresh(); // Refresh data after successful deletion
-
+        await refresh();
+        Toast.show({
+          type: "success",
+          text1: ids.length === 1 ? "Recipe deleted" : "Recipes deleted",
+          text2: `Successfully deleted ${ids.length} items`,
+        });
       } catch (error) {
         console.error("Delete failed:", error);
+        Toast.show({
+          type: "error",
+          text1: "Delete failed",
+          text2: "Could not delete recipes",
+        });
       }
       setShowUndo(false);
+      setDeletedRecipeIds([]);
     }, 7000);
-  
+  };
+
+  // Delete single item
+  const deleteRecipe = (id: number) => {
+    handleDelete([id]);
+  };
+
+  // Delete in bulk
+  const deleteSelectedRecipes = () => {
+    if (selectedRecipes.length === 0) return;
+    handleDelete(selectedRecipes);
     setSelectedRecipes([]);
   };
 
@@ -170,9 +180,10 @@ const HomeScreen = () => {
     if (deletionTimeout.current) {
       clearTimeout(deletionTimeout.current);
     }
+    setRecipes((prev) => [...prev, ...deletedRecipes]);
     setShowUndo(false);
     setDeletedRecipes([]);
-    refresh(); // Force refresh to get latest data
+    setDeletedRecipeIds([]);
   };
 
   return (
@@ -274,14 +285,7 @@ const HomeScreen = () => {
                     style={styles.deleteButton}
                     onPress={(e) => {
                       e.stopPropagation();
-                      Alert.alert("Delete Recipe?", "Are you sure?", [
-                        { text: "Cancel", style: "cancel" },
-                        {
-                          text: "Delete",
-                          style: "destructive",
-                          onPress: () => deleteRecipe(r.id),
-                        },
-                      ]);
+                      deleteRecipe(r.id); // Directly call delete without alert
                     }}
                   >
                     <Icon name="delete" size={20} color="#E74C3C" />
@@ -396,7 +400,8 @@ const HomeScreen = () => {
       {showUndo && (
         <View style={styles.undoToast}>
           <Text style={styles.undoText}>
-            {deletedRecipes.length} recipes deleted
+            {deletedRecipeIds.length} recipe
+            {deletedRecipeIds.length > 1 ? "s" : ""} deleted
           </Text>
           <TouchableOpacity onPress={handleUndo}>
             <Text style={styles.undoButton}>UNDO</Text>
@@ -653,7 +658,7 @@ const styles = StyleSheet.create({
   undoToast: {
     position: "absolute",
     bottom: 20,
-    zIndex: 100, 
+    zIndex: 100,
     left: 20,
     right: 20,
     backgroundColor: "rgba(0,0,0,0.9)",

@@ -6,12 +6,14 @@ import Login from "./login";
 import SignUp from "./sign_up";
 import { createStackNavigator } from "@react-navigation/stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "@expo/vector-icons";
 import ForgotPassword from "./forgot_password_1";
 import Home from "./home";
 import Profile from "./profile";
 import ProfileEdit from "./profile_edit";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Toast from "react-native-toast-message";
+import { toastConfig } from "./hooks/toastConfig";
 
 const AuthStack = createStackNavigator();
 const MainTab = createBottomTabNavigator();
@@ -24,34 +26,34 @@ function MainApp() {
         tabBarIcon: ({ focused, color, size }) => {
           let iconName: keyof typeof Ionicons.glyphMap;
 
-          if (route.name === 'Home') {
-            iconName = focused ? 'home' : 'home-outline';
-          } else if (route.name === 'Profile') {
-            iconName = focused ? 'person' : 'person-outline';
+          if (route.name === "Home") {
+            iconName = focused ? "home" : "home-outline";
+          } else if (route.name === "Profile") {
+            iconName = focused ? "person" : "person-outline";
           } else {
-            iconName = 'alert-circle-outline'; // default icon
+            iconName = "alert-circle-outline"; // default icon
           }
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#FE7F2D',
-        tabBarInactiveTintColor: 'gray',
+        tabBarActiveTintColor: "#FE7F2D",
+        tabBarInactiveTintColor: "gray",
         tabBarStyle: {
-          backgroundColor: '#00272B',
+          backgroundColor: "#00272B",
           borderTopWidth: 0,
         },
-        headerShown: false
+        headerShown: false,
       })}
     >
-      <MainTab.Screen 
-        name="Home" 
-        component={Home} 
-        options={{ title: 'Home' }}
+      <MainTab.Screen
+        name="Home"
+        component={Home}
+        options={{ title: "Home" }}
       />
-      <MainTab.Screen 
-        name="Profile" 
-        component={Profile} 
-        options={{ title: 'Profile' }}
+      <MainTab.Screen
+        name="Profile"
+        component={Profile}
+        options={{ title: "Profile" }}
       />
     </MainTab.Navigator>
   );
@@ -62,11 +64,11 @@ function AuthScreens() {
     <AuthStack.Navigator
       screenOptions={{
         headerStyle: {
-          backgroundColor: '#00272B',
+          backgroundColor: "#00272B",
         },
-        headerTintColor: '#fff',
+        headerTintColor: "#fff",
         headerTitleStyle: {
-          fontWeight: 'bold',
+          fontWeight: "bold",
         },
       }}
     >
@@ -125,35 +127,41 @@ export default function App() {
       <RootStack.Navigator>
         {isLoggedIn ? (
           <RootStack.Group>
-            <RootStack.Screen 
-              name="MainApp" 
-              component={MainApp} 
+            <RootStack.Screen
+              name="MainApp"
+              component={MainApp}
               options={{ headerShown: false }}
             />
-            <RootStack.Screen 
-              name="ProfileEdit" 
-              component={ProfileEdit} 
-              options={{ 
-                headerShown: true, 
-                title: 'Edit Profile',
+            <RootStack.Screen
+              name="ProfileEdit"
+              component={ProfileEdit}
+              options={{
+                headerShown: true,
+                title: "Edit Profile",
                 headerStyle: {
-                  backgroundColor: '#00272B',
+                  backgroundColor: "#00272B",
                 },
-                headerTintColor: '#fff',
+                headerTintColor: "#fff",
                 headerTitleStyle: {
-                  fontWeight: 'bold',
+                  fontWeight: "bold",
                 },
-              }} 
+              }}
             />
           </RootStack.Group>
         ) : (
-          <RootStack.Screen 
-            name="Auth" 
-            component={AuthScreens} 
+          <RootStack.Screen
+            name="Auth"
+            component={AuthScreens}
             options={{ headerShown: false }}
           />
         )}
       </RootStack.Navigator>
+      <Toast
+        config={toastConfig}
+        topOffset={40}
+        visibilityTime={3000}
+        position="top"
+      />
       <StatusBar style="light" />
     </View>
   );
@@ -162,6 +170,14 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#00272B',
+    backgroundColor: "#00272B",
   },
 });
+
+declare module 'react-native-toast-message' {
+  interface ToastConfig {
+    success: (props: { text1: string; text2?: string }) => React.ReactNode;
+    error: (props: { text1: string; text2?: string }) => React.ReactNode;
+    [key: string]: (props: any) => React.ReactNode;
+  }
+}

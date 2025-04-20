@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// useUserRecipes.ts (corrected version)
+import { useEffect, useState, useCallback } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export interface Recipe {
   id: number;
@@ -11,29 +12,42 @@ export interface Recipe {
 }
 
 export default function useUserRecipes() {
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [localRecipes, setLocalRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchRecipes = useCallback(async () => {
     setLoading(true);
     try {
-      const token = await AsyncStorage.getItem('authToken');
-      if (!token) throw new Error('No auth token');
-      const res = await fetch('http://192.168.100.10:8000/api/get-user-recipes/', {
-        headers: { Authorization: `Token ${token}` },
-      });
+      const token = await AsyncStorage.getItem("authToken");
+      if (!token) throw new Error("No auth token");
+      
+      const res = await fetch(
+        "http://192.168.100.10:8000/api/get-user-recipes/",
+        { headers: { Authorization: `Token ${token}` } }
+      );
+      
       if (!res.ok) throw new Error(`Status ${res.status}`);
       const data: Recipe[] = await res.json();
-      setRecipes(data);
+      setLocalRecipes(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+      // Consider keeping previous recipes on error
+      // setLocalRecipes(prev => prev.length ? prev : []);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { fetchRecipes(); }, [fetchRecipes]);
+  useEffect(() => {
+    fetchRecipes();
+  }, [fetchRecipes]);
 
-  return { recipes, loading, error, refresh: fetchRecipes };
+  return {
+    recipes: localRecipes,
+    loading,
+    error,
+    refresh: fetchRecipes,
+    setRecipes: setLocalRecipes, // For optimistic updates
+  };
 }
