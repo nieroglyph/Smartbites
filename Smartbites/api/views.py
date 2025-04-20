@@ -157,6 +157,35 @@ def delete_recipe(request, recipe_id):
         return Response(status=status.HTTP_204_NO_CONTENT)  # Remove message body
     except Recipe.DoesNotExist:
         return Response({'error': 'Recipe not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def delete_multiple_recipes(request):
+    """Delete multiple recipes with validation"""
+    try:
+        recipe_ids = request.data.get('recipe_ids', [])
+        
+        # Verify ownership and existence
+        recipes = Recipe.objects.filter(
+            id__in=recipe_ids,
+            user=request.user
+        )
+        
+        # Get IDs that actually exist and belong to user
+        valid_ids = list(recipes.values_list('id', flat=True))
+        deleted_count = recipes.delete()[0]
+        
+        return Response({
+            'deleted_count': deleted_count,
+            'valid_ids': valid_ids
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response(
+            {'error': str(e)},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
 # ollama - biteai
 from .models import UserProfile

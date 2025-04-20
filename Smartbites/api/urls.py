@@ -5,7 +5,7 @@ from .views import register_user, login_user, logout_user, my_secure_view
 # User Profiles
 from .views import get_user_profile
 # Save, Fetch, Delete, Edit Recipe
-from .views import save_recipe, get_user_recipes, delete_recipe, update_recipe
+from .views import save_recipe, get_user_recipes, delete_recipe, delete_multiple_recipes, update_recipe
 # ollama
 from .views import query_ollama
 # display user data in react
@@ -25,6 +25,7 @@ urlpatterns = [
     path('get-user-recipes/', get_user_recipes, name='get_user_recipes'),
     path('update-recipe/<int:recipe_id>/', update_recipe, name='update-recipe'),
     path('delete-recipe/<int:recipe_id>/', delete_recipe, name='delete_recipe'),
+    path('delete-multiple-recipes/', delete_multiple_recipes, name='delete_multiple_recipes'),
     path('query-ollama/', query_ollama, name='query_ollama'),
     path('current-user/', get_current_user, name='current-user'),
     path('update-profile/', update_profile, name='update-profile'),

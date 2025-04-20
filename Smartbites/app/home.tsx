@@ -23,6 +23,7 @@ import useUserRecipes, { Recipe } from "./hooks/useUserRecipes";
 import { useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BlurView } from "expo-blur";
+import { useRef } from "react";
 
 const HomeScreen = () => {
   const router = useRouter();
@@ -37,7 +38,16 @@ const HomeScreen = () => {
   const [editedInstructions, setEditedInstructions] = useState("");
   const [editedCost, setEditedCost] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedRecipes, setSelectedRecipes] = useState<number[]>([]);
+  const [deletedRecipes, setDeletedRecipes] = useState<Recipe[]>([]);
+  const [showUndo, setShowUndo] = useState(false);
+  let deletionTimeout = useRef<NodeJS.Timeout | null>(null);
+
   if (!fontsLoaded) return null;
+
+  const handleLongPress = (recipeId: number) => {
+    setSelectedRecipes((prev) => [...prev, recipeId]);
+  };
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -118,6 +128,53 @@ const HomeScreen = () => {
     }
   };
 
+  // Add bulk delete function
+  const deleteSelectedRecipes = async () => {
+    if (selectedRecipes.length === 0) return;
+  
+    const toDelete = recipes.filter((r) => selectedRecipes.includes(r.id));
+    setDeletedRecipes(toDelete);
+    setShowUndo(true);
+  
+    deletionTimeout.current = setTimeout(async () => {
+      try {
+        const token = await AsyncStorage.getItem("authToken");
+        if (!token) throw new Error("Not authenticated");
+  
+        const response = await fetch("http://192.168.100.10:8000/api/delete-multiple-recipes/", {
+          method: "POST",
+          headers: {
+            Authorization: `Token ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ recipe_ids: selectedRecipes }),
+        });
+  
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        await refresh(); // Refresh data after successful deletion
+
+      } catch (error) {
+        console.error("Delete failed:", error);
+      }
+      setShowUndo(false);
+    }, 7000);
+  
+    setSelectedRecipes([]);
+  };
+
+  // Undo handler
+  const handleUndo = () => {
+    if (deletionTimeout.current) {
+      clearTimeout(deletionTimeout.current);
+    }
+    setShowUndo(false);
+    setDeletedRecipes([]);
+    refresh(); // Force refresh to get latest data
+  };
+
   return (
     <View style={styles.container}>
       {/* Logo */}
@@ -133,6 +190,11 @@ const HomeScreen = () => {
           <Text style={[styles.recentFoodsText, styles.customFont]}>
             Your Saved Recipes
           </Text>
+          {selectedRecipes.length > 0 && (
+            <TouchableOpacity onPress={() => setSelectedRecipes([])}>
+              <Icon name="close" size={24} color="#FE7F2D" />
+            </TouchableOpacity>
+          )}
         </View>
 
         {loading ? (
@@ -169,13 +231,28 @@ const HomeScreen = () => {
                   key={r.id}
                   activeOpacity={0.8}
                   onPress={() => {
-                    setExpandedId(isExpanded ? null : r.id);
+                    if (selectedRecipes.length > 0) {
+                      setSelectedRecipes((prev) =>
+                        prev.includes(r.id)
+                          ? prev.filter((id) => id !== r.id)
+                          : [...prev, r.id]
+                      );
+                    } else {
+                      setExpandedId(isExpanded ? null : r.id);
+                    }
                   }}
+                  onLongPress={() => handleLongPress(r.id)}
                   style={[
                     styles.foodItem,
                     isExpanded && styles.foodItemExpanded,
+                    selectedRecipes.includes(r.id) && styles.selectedItem,
                   ]}
                 >
+                  {selectedRecipes.includes(r.id) && (
+                    <View style={styles.selectionIndicator}>
+                      <Icon name="check" size={20} color="white" />
+                    </View>
+                  )}
                   {/* edit icon */}
                   <TouchableOpacity
                     style={styles.editButton}
@@ -192,7 +269,6 @@ const HomeScreen = () => {
                   >
                     <Icon name="edit" size={20} color="#3498DB" />
                   </TouchableOpacity>
-
                   {/* delete icon */}
                   <TouchableOpacity
                     style={styles.deleteButton}
@@ -218,14 +294,12 @@ const HomeScreen = () => {
                     Saved {new Date(r.saved_at).toLocaleDateString()}
                     {r.cost != null && <> • ₱{costNum.toFixed(2)}</>}
                   </Text>
-
                   {/* If collapsed, show snippet */}
                   {!isExpanded && (
                     <Text style={styles.recipeSnippet}>
                       {r.ingredients.split("\n")[0]}…
                     </Text>
                   )}
-
                   {/* If expanded, show full details */}
                   {isExpanded && (
                     <View style={styles.expandedDetails}>
@@ -306,6 +380,30 @@ const HomeScreen = () => {
         </TouchableWithoutFeedback>
       </Modal>
 
+      {/* Floating Delete Button */}
+      {selectedRecipes.length > 0 && (
+        <TouchableOpacity
+          style={styles.floatingDeleteButton}
+          onPress={deleteSelectedRecipes}
+        >
+          <Text style={styles.deleteButtonText}>
+            Delete ({selectedRecipes.length})
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Undo Toast */}
+      {showUndo && (
+        <View style={styles.undoToast}>
+          <Text style={styles.undoText}>
+            {deletedRecipes.length} recipes deleted
+          </Text>
+          <TouchableOpacity onPress={handleUndo}>
+            <Text style={styles.undoButton}>UNDO</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Bottom Navigation */}
       <View style={styles.navContainer}>
         <View style={styles.navigation}>
@@ -375,12 +473,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 10,
-    gap: 8
+    gap: 8,
   },
   recentFoodsText: { fontSize: 16, color: "#2E2E2E" },
-  scrollContent: { 
+  scrollContent: {
     paddingTop: 10,
-    minHeight: '100%', // Ensures ScrollView is always scrollable
+    minHeight: "100%", // Ensures ScrollView is always scrollable
   },
   foodItem: {
     backgroundColor: "#FBFCF8",
@@ -511,6 +609,68 @@ const styles = StyleSheet.create({
     right: 40,
     top: 10,
     zIndex: 1,
+  },
+  selectedItem: {
+    backgroundColor: "#FFECB3",
+    borderColor: "#FE7F2D",
+    borderWidth: 1,
+  },
+  selectionIndicator: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    backgroundColor: "#FE7F2D",
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 2,
+  },
+  floatingDeleteButton: {
+    position: "absolute",
+    bottom: 100,
+    zIndex: 100,
+    alignSelf: "center",
+    backgroundColor: "#E74C3C",
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 25,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  deleteButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  undoToast: {
+    position: "absolute",
+    bottom: 20,
+    zIndex: 100, 
+    left: 20,
+    right: 20,
+    backgroundColor: "rgba(0,0,0,0.9)",
+    padding: 16,
+    borderRadius: 8,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  undoText: {
+    color: "white",
+    fontSize: 14,
+  },
+  undoButton: {
+    color: "#FE7F2D",
+    fontWeight: "bold",
+    paddingHorizontal: 12,
   },
 });
 
