@@ -233,7 +233,7 @@ const [profile, setProfile] = useState<Profile>({
       const token = await AsyncStorage.getItem("authToken");
       if (!token) return;
   
-      const response = await fetch("http://192.168.100.10:8000/api/update-profile/", {
+      const response = await fetch("http://192.168.1.9:8000/api/update-profile/", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -360,7 +360,7 @@ const [profile, setProfile] = useState<Profile>({
         return;
       }
   
-      const response = await fetch("http://192.168.100.10:8000/api/change-password/", {
+      const response = await fetch("http://192.168.1.9:8000/api/change-password/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

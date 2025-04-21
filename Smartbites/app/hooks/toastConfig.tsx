@@ -3,40 +3,48 @@ import { View, Text, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const styles = StyleSheet.create({
-  successToast: {
-    backgroundColor: '#4BB543',
-    padding: 15,
+  baseToast: {
+    padding: 14,
     borderRadius: 10,
-    margin: 10,
+    marginHorizontal: 16,
+    marginVertical: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    zIndex: 9999
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  successToast: {
+    borderBottomWidth: 3,
+    borderBottomColor: '#4BB543',
   },
   errorToast: {
-    backgroundColor: '#FF4444',
-    padding: 15,
-    borderRadius: 10,
-    margin: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    zIndex: 9999
+    borderBottomWidth: 3,
+    borderBottomColor: '#FF4444',
   },
   textContainer: {
-    marginLeft: 10
+    marginLeft: 12,
+    flex: 1,
   },
   title: {
-    color: 'white', 
-    fontWeight: 'bold'
+    color: '#111',
+    fontWeight: '600',
+    fontSize: 15,
   },
   message: {
-    color: 'white'
+    color: '#444',
+    fontSize: 13,
+    marginTop: 2,
   }
 });
 
 export const toastConfig: ToastConfig = {
   success: ({ text1, text2 }) => (
-    <View style={styles.successToast}>
-      <Icon name="check-circle" size={20} color="white" />
+    <View style={[styles.baseToast, styles.successToast]}>
+      <Icon name="check-circle" size={20} color="#4BB543" />
       <View style={styles.textContainer}>
         <Text style={styles.title}>{text1}</Text>
         {text2 && <Text style={styles.message}>{text2}</Text>}
@@ -44,8 +52,8 @@ export const toastConfig: ToastConfig = {
     </View>
   ),
   error: ({ text1, text2 }) => (
-    <View style={styles.errorToast}>
-      <Icon name="error" size={20} color="white" />
+    <View style={[styles.baseToast, styles.errorToast]}>
+      <Icon name="error-outline" size={20} color="#FF4444" />
       <View style={styles.textContainer}>
         <Text style={styles.title}>{text1}</Text>
         {text2 && <Text style={styles.message}>{text2}</Text>}

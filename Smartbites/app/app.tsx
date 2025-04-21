@@ -5,8 +5,6 @@ import SplashScreen from "./splashscreen";
 import Login from "./login";
 import SignUp from "./sign_up";
 import { createStackNavigator } from "@react-navigation/stack";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { Ionicons } from "@expo/vector-icons";
 import ForgotPassword from "./forgot_password_1";
 import Home from "./home";
 import Profile from "./profile";
@@ -16,48 +14,7 @@ import Toast from "react-native-toast-message";
 import { toastConfig } from "./hooks/toastConfig";
 
 const AuthStack = createStackNavigator();
-const MainTab = createBottomTabNavigator();
 const RootStack = createStackNavigator();
-
-function MainApp() {
-  return (
-    <MainTab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName: keyof typeof Ionicons.glyphMap;
-
-          if (route.name === "Home") {
-            iconName = focused ? "home" : "home-outline";
-          } else if (route.name === "Profile") {
-            iconName = focused ? "person" : "person-outline";
-          } else {
-            iconName = "alert-circle-outline"; // default icon
-          }
-
-          return <Ionicons name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: "#FE7F2D",
-        tabBarInactiveTintColor: "gray",
-        tabBarStyle: {
-          backgroundColor: "#00272B",
-          borderTopWidth: 0,
-        },
-        headerShown: false,
-      })}
-    >
-      <MainTab.Screen
-        name="Home"
-        component={Home}
-        options={{ title: "Home" }}
-      />
-      <MainTab.Screen
-        name="Profile"
-        component={Profile}
-        options={{ title: "Profile" }}
-      />
-    </MainTab.Navigator>
-  );
-}
 
 function AuthScreens() {
   return (
@@ -128,8 +85,13 @@ export default function App() {
         {isLoggedIn ? (
           <RootStack.Group>
             <RootStack.Screen
-              name="MainApp"
-              component={MainApp}
+              name="Home"
+              component={Home}
+              options={{ headerShown: false }}
+            />
+            <RootStack.Screen
+              name="Profile"
+              component={Profile}
               options={{ headerShown: false }}
             />
             <RootStack.Screen
@@ -174,7 +136,7 @@ const styles = StyleSheet.create({
   },
 });
 
-declare module 'react-native-toast-message' {
+declare module "react-native-toast-message" {
   interface ToastConfig {
     success: (props: { text1: string; text2?: string }) => React.ReactNode;
     error: (props: { text1: string; text2?: string }) => React.ReactNode;

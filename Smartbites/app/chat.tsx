@@ -435,7 +435,7 @@ const ChatScreen = () => {
           return false;
         }
         const response = await fetch(
-          "http://192.168.100.10:8000/api/query-ollama/",
+          "http://192.168.1.9:8000/api/query-ollama/",
           {
             method: "POST",
             headers: {
@@ -502,7 +502,7 @@ const ChatScreen = () => {
       const token = await AsyncStorage.getItem("authToken");
       if (!token) throw new Error("Not authenticated");
   
-      const response = await fetch("http://192.168.100.10:8000/api/save-recipe/", {
+      const response = await fetch("http://192.168.1.9:8000/api/save-recipe/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -919,6 +919,7 @@ const ChatScreen = () => {
       keyboardVerticalOffset={Platform.OS === "ios" ? 88 : 0}
     >
       <View style={styles.container}>
+        {/* Header */}
         <View style={styles.logoContainer}>
           <Image
             source={require("../assets/images/logo/smartbites-high-resolution-logo-transparent.png")}
@@ -928,7 +929,8 @@ const ChatScreen = () => {
             <Icon name="delete" size={24} color="#FE7F2D" />
           </TouchableOpacity>
         </View>
-
+  
+        {/* Chat area - takes all available space */}
         <View style={styles.chatArea}>
           <ScrollView
             ref={scrollViewRef}
@@ -970,8 +972,7 @@ const ChatScreen = () => {
                       <FormattedText text={msg.text} />
                     </Text>
                   ) : null}
-
-                  {/* Only show timestamp directly if it's not a recipe message */}
+  
                   {!(
                     !msg.isUser &&
                     !isAIResponding &&
@@ -983,8 +984,7 @@ const ChatScreen = () => {
                       {msg.time}
                     </Text>
                   )}
-
-                  {/* Recipe action bar with save button */}
+  
                   {!msg.isUser &&
                     !isAIResponding &&
                     msg.text &&
@@ -1015,7 +1015,8 @@ const ChatScreen = () => {
             ))}
           </ScrollView>
         </View>
-
+  
+        {/* Photo preview (positioned absolutely above input) */}
         {photoPreview && (
           <View style={styles.photoPreviewContainer}>
             <Image
@@ -1031,87 +1032,88 @@ const ChatScreen = () => {
             </TouchableOpacity>
           </View>
         )}
-
-        <View
-          style={[styles.inputWrapper, { bottom: keyboardVisible ? 0 : 70 }]}
-        >
-          <View style={styles.inputContainer}>
-            <View style={styles.inputSection}>
-              <View style={styles.chatboxContainer}>
-                <TextInput
-                  style={[
-                    styles.input,
-                    styles.defaultFont,
-                    { height: Math.max(16, inputHeight) },
-                    isAIResponding && styles.disabledInput,
-                  ]}
-                  placeholder={
-                    isAIResponding
-                      ? "BiteAI is responding..."
-                      : "Type your message..."
-                  }
-                  placeholderTextColor="#999"
-                  multiline
-                  value={message}
-                  onChangeText={setMessage}
-                  onContentSizeChange={(event) => {
-                    const height = event.nativeEvent.contentSize.height;
-                    const newHeight = Math.max(16, Math.ceil(height));
-                    setInputHeight(newHeight);
-                  }}
-                  onSubmitEditing={handleSend}
-                  editable={!isAIResponding}
-                />
-                <View style={styles.mediaButtons}>
-                  <TouchableOpacity
-                    style={[
-                      styles.mediaButton,
-                      isAIResponding && styles.disabledButton,
-                    ]}
-                    onPress={() => pickImage("camera")}
-                    disabled={isAIResponding}
-                  >
-                    <FontAwesomeIcon
-                      name="camera"
-                      size={16}
-                      color={isAIResponding ? "#ccc" : "#FE7F2D"}
-                    />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.mediaButton,
-                      isAIResponding && styles.disabledButton,
-                    ]}
-                    onPress={() => pickImage("gallery")}
-                    disabled={isAIResponding}
-                  >
-                    <FontAwesomeIcon
-                      name="image"
-                      size={16}
-                      color={isAIResponding ? "#ccc" : "#FE7F2D"}
-                    />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <TouchableOpacity
+  
+        {/* Input container - fixed height */}
+        <View style={[
+          styles.inputContainer, 
+          { marginBottom: keyboardVisible ? 0 : 70 }
+        ]}>
+          <View style={styles.inputSection}>
+            <View style={styles.chatboxContainer}>
+              <TextInput
                 style={[
-                  styles.sendButton,
-                  isAIResponding && styles.disabledButton,
+                  styles.input,
+                  styles.defaultFont,
+                  { height: Math.max(16, inputHeight) },
+                  isAIResponding && styles.disabledInput,
                 ]}
-                onPress={handleSend}
-                disabled={isAIResponding}
-              >
-                <Icon
-                  name="send"
-                  size={16}
-                  color={isAIResponding ? "#ccc" : "#fff"}
-                />
-              </TouchableOpacity>
+                placeholder={
+                  isAIResponding
+                    ? "BiteAI is responding..."
+                    : "Type your message..."
+                }
+                placeholderTextColor="#999"
+                multiline
+                value={message}
+                onChangeText={setMessage}
+                onContentSizeChange={(event) => {
+                  const height = event.nativeEvent.contentSize.height;
+                  const newHeight = Math.max(16, Math.ceil(height));
+                  setInputHeight(newHeight);
+                }}
+                onSubmitEditing={handleSend}
+                editable={!isAIResponding}
+              />
+              <View style={styles.mediaButtons}>
+                <TouchableOpacity
+                  style={[
+                    styles.mediaButton,
+                    isAIResponding && styles.disabledButton,
+                  ]}
+                  onPress={() => pickImage("camera")}
+                  disabled={isAIResponding}
+                >
+                  <FontAwesomeIcon
+                    name="camera"
+                    size={16}
+                    color={isAIResponding ? "#ccc" : "#FE7F2D"}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.mediaButton,
+                    isAIResponding && styles.disabledButton,
+                  ]}
+                  onPress={() => pickImage("gallery")}
+                  disabled={isAIResponding}
+                >
+                  <FontAwesomeIcon
+                    name="image"
+                    size={16}
+                    color={isAIResponding ? "#ccc" : "#FE7F2D"}
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
+  
+            <TouchableOpacity
+              style={[
+                styles.sendButton,
+                isAIResponding && styles.disabledButton,
+              ]}
+              onPress={handleSend}
+              disabled={isAIResponding}
+            >
+              <Icon
+                name="send"
+                size={16}
+                color={isAIResponding ? "#ccc" : "#fff"}
+              />
+            </TouchableOpacity>
           </View>
         </View>
-
+  
+        {/* Navigation - only when keyboard is hidden */}
         {!keyboardVisible && (
           <View style={styles.navContainer}>
             <View style={styles.navigation}>
@@ -1122,7 +1124,7 @@ const ChatScreen = () => {
                 <FontAwesomeIcon name="home" size={24} color="#FE7F2D" />
                 <Text style={[styles.navText, styles.defaultFont]}>Home</Text>
               </TouchableOpacity>
-
+  
               <TouchableOpacity
                 style={styles.navItem}
                 onPress={() => router.push("/chat")}
@@ -1137,7 +1139,7 @@ const ChatScreen = () => {
                 </View>
                 <Text style={[styles.navText, styles.defaultFont]}>Chat</Text>
               </TouchableOpacity>
-
+  
               <TouchableOpacity
                 style={styles.navItem}
                 onPress={() => router.push("/budget")}
@@ -1149,7 +1151,7 @@ const ChatScreen = () => {
                 />
                 <Text style={[styles.navText, styles.defaultFont]}>Budget</Text>
               </TouchableOpacity>
-
+  
               <TouchableOpacity
                 style={styles.navItem}
                 onPress={() => router.push("/profile")}
@@ -1195,7 +1197,7 @@ const styles = StyleSheet.create({
   chatArea: {
     flex: 1,
     marginTop: 10,
-    marginBottom: 100,
+    marginBottom: 5,
   },
   chatContent: {
     flex: 1,
@@ -1255,7 +1257,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: "transparent",
-    paddingTop: 8,
+    paddingBottom: 8,
     height: "auto",
     minHeight: 60,
     justifyContent: "center",
