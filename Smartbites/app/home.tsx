@@ -15,6 +15,9 @@ import {
   Animated,
   Easing,
   Pressable,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform
 } from "react-native";
 import { useFonts } from "expo-font";
 import { useRouter } from "expo-router";
@@ -47,9 +50,31 @@ const HomeScreen = () => {
   const [deletedRecipeIds, setDeletedRecipeIds] = useState<number[]>([]);
   const [deletedRecipes, setDeletedRecipes] = useState<Recipe[]>([]);
   const [menuVisibleId, setMenuVisibleId] = useState<number | null>(null);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   const deletionTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  // empy recipes animation  
+  // Keyboard visibility effect
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => {
+        setKeyboardVisible(true);
+      }
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        setKeyboardVisible(false);
+      }
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
+
+  // Animation effects
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const slideUpAnim = useRef(new Animated.Value(20)).current;
@@ -441,7 +466,6 @@ const HomeScreen = () => {
                     )}
                   </TouchableOpacity>
 
-                  {/* Always visible 3-dot menu button */}
                   <TouchableOpacity
                     style={styles.menuButton}
                     onPress={(e) => {
@@ -452,7 +476,6 @@ const HomeScreen = () => {
                     <Icon name="more-vert" size={24} color="#555" />
                   </TouchableOpacity>
                   
-                  {/* Dropdown menu */}
                   {menuVisibleId === r.id && (
                     <View style={styles.menuDropdown}>
                       <TouchableOpacity
@@ -473,16 +496,16 @@ const HomeScreen = () => {
                       <TouchableOpacity
                         style={styles.menuItem}
                         onPress={(e) => {
-                      e.stopPropagation();
-                      deleteRecipe(r.id);
-                    }}
-                  >
-                    <Icon name="delete" size={18} color="#E74C3C" style={styles.menuIcon} />
-                    <Text style={styles.menuText}>Delete</Text>
-                  </TouchableOpacity>
+                          e.stopPropagation();
+                          deleteRecipe(r.id);
+                        }}
+                      >
+                        <Icon name="delete" size={18} color="#E74C3C" style={styles.menuIcon} />
+                        <Text style={styles.menuText}>Delete</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
-              )}
-            </View>
               );
             })}
           </ScrollView>
@@ -495,86 +518,91 @@ const HomeScreen = () => {
         transparent={true}
         onRequestClose={() => setEditingRecipe(null)}
       >
-        <TouchableWithoutFeedback onPress={() => setEditingRecipe(null)}>
-          <BlurView
-            style={styles.blurView}
-            intensity={20}
-            tint="dark"
-          >
-            <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
-              <Animated.View 
-                style={[
-                  styles.animatedModalView,
-                  {
-                    transform: [
-                      { scale: modalScaleAnim },
-                      { translateY: modalSlideAnim }
-                    ],
-                    opacity: modalOpacityAnim,
-                  }
-                ]}
-              >
-                <View style={styles.modalContent}>
-                  <Text style={styles.modalTitle}>Edit Recipe</Text>
-                  
-                  <Text style={styles.inputLabel}>Recipe Title</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={editedTitle}
-                    onChangeText={setEditedTitle}
-                    placeholder="Enter recipe title..."
-                    placeholderTextColor="#7F8C8D"
-                  />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalKeyboardAvoidingView}
+        >
+          <TouchableWithoutFeedback onPress={() => setEditingRecipe(null)}>
+            <BlurView
+              style={styles.blurView}
+              intensity={20}
+              tint="dark"
+            >
+              <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+                <Animated.View 
+                  style={[
+                    styles.animatedModalView,
+                    {
+                      transform: [
+                        { scale: modalScaleAnim },
+                        { translateY: modalSlideAnim }
+                      ],
+                      opacity: modalOpacityAnim,
+                    }
+                  ]}
+                >
+                  <View style={styles.modalContent}>
+                    <Text style={styles.modalTitle}>Edit Recipe</Text>
+                    
+                    <Text style={styles.inputLabel}>Recipe Title</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      value={editedTitle}
+                      onChangeText={setEditedTitle}
+                      placeholder="Enter recipe title..."
+                      placeholderTextColor="#7F8C8D"
+                    />
 
-                  <Text style={styles.inputLabel}>Ingredients</Text>
-                  <TextInput
-                    style={[styles.textInput, styles.messageInput]}
-                    multiline
-                    value={editedIngredients}
-                    onChangeText={setEditedIngredients}
-                    placeholder="Enter ingredients (one per line)..."
-                    placeholderTextColor="#7F8C8D"
-                  />
+                    <Text style={styles.inputLabel}>Ingredients</Text>
+                    <TextInput
+                      style={[styles.textInput, styles.messageInput]}
+                      multiline
+                      value={editedIngredients}
+                      onChangeText={setEditedIngredients}
+                      placeholder="Enter ingredients (one per line)..."
+                      placeholderTextColor="#7F8C8D"
+                    />
 
-                  <Text style={styles.inputLabel}>Instructions</Text>
-                  <TextInput
-                    style={[styles.textInput, styles.messageInput]}
-                    multiline
-                    value={editedInstructions}
-                    onChangeText={setEditedInstructions}
-                    placeholder="Enter instructions..."
-                    placeholderTextColor="#7F8C8D"
-                  />
+                    <Text style={styles.inputLabel}>Instructions</Text>
+                    <TextInput
+                      style={[styles.textInput, styles.messageInput]}
+                      multiline
+                      value={editedInstructions}
+                      onChangeText={setEditedInstructions}
+                      placeholder="Enter instructions..."
+                      placeholderTextColor="#7F8C8D"
+                    />
 
-                  <Text style={styles.inputLabel}>Cost (optional)</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={editedCost}
-                    onChangeText={setEditedCost}
-                    placeholder="Enter estimated cost..."
-                    placeholderTextColor="#7F8C8D"
-                    keyboardType="numeric"
-                  />
+                    <Text style={styles.inputLabel}>Cost (optional)</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      value={editedCost}
+                      onChangeText={setEditedCost}
+                      placeholder="Enter estimated cost..."
+                      placeholderTextColor="#7F8C8D"
+                      keyboardType="numeric"
+                    />
 
-                  <View style={styles.modalButtonContainer}>
-                    <Pressable
-                      style={[styles.modalButton, styles.modalButtonClose]}
-                      onPress={() => setEditingRecipe(null)}
-                    >
-                      <Text style={styles.modalButtonText}>Cancel</Text>
-                    </Pressable>
-                    <Pressable
-                      style={[styles.modalButton, styles.modalButtonSubmit]}
-                      onPress={updateRecipe}
-                    >
-                      <Text style={styles.modalButtonText}>Save Changes</Text>
-                    </Pressable>
+                    <View style={styles.modalButtonContainer}>
+                      <Pressable
+                        style={[styles.modalButton, styles.modalButtonClose]}
+                        onPress={() => setEditingRecipe(null)}
+                      >
+                        <Text style={styles.modalButtonText}>Cancel</Text>
+                      </Pressable>
+                      <Pressable
+                        style={[styles.modalButton, styles.modalButtonSubmit]}
+                        onPress={updateRecipe}
+                      >
+                        <Text style={styles.modalButtonText}>Save Changes</Text>
+                      </Pressable>
+                    </View>
                   </View>
-                </View>
-              </Animated.View>
-            </TouchableWithoutFeedback>
-          </BlurView>
-        </TouchableWithoutFeedback>
+                </Animated.View>
+              </TouchableWithoutFeedback>
+            </BlurView>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
       </Modal>
 
       {showUndo && (
@@ -611,49 +639,51 @@ const HomeScreen = () => {
         </View>
       )}
 
-      <View style={styles.navContainer}>
-        <View style={styles.navigation}>
-          <TouchableOpacity
-            style={styles.navItem}
-            onPress={() => router.push("/home")}
-          >
-            <View style={styles.glowContainer}>
-              <FontAwesomeIcon
-                name="home"
+      {!keyboardVisible && (
+        <View style={styles.navContainer}>
+          <View style={styles.navigation}>
+            <TouchableOpacity
+              style={styles.navItem}
+              onPress={() => router.push("/home")}
+            >
+              <View style={styles.glowContainer}>
+                <FontAwesomeIcon
+                  name="home"
+                  size={24}
+                  color="#FE7F2D"
+                  style={styles.glowIcon}
+                />
+              </View>
+              <Text style={[styles.navText, styles.customFont]}>Home</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.navItem}
+              onPress={() => router.push("/chat")}
+            >
+              <FontAwesome6Icon name="brain" size={24} color="#FE7F2D" />
+              <Text style={[styles.navText, styles.customFont]}>Chat</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.navItem}
+              onPress={() => router.push("/budget")}
+            >
+              <FontAwesome6Icon name="money-bills" size={24} color="#FE7F2D" />
+              <Text style={[styles.navText, styles.customFont]}>Budget</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.navItem}
+              onPress={() => router.push("/profile")}
+            >
+              <MaterialCommunityIcons
+                name="account-settings"
                 size={24}
                 color="#FE7F2D"
-                style={styles.glowIcon}
               />
-            </View>
-            <Text style={[styles.navText, styles.customFont]}>Home</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.navItem}
-            onPress={() => router.push("/chat")}
-          >
-            <FontAwesome6Icon name="brain" size={24} color="#FE7F2D" />
-            <Text style={[styles.navText, styles.customFont]}>Chat</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.navItem}
-            onPress={() => router.push("/budget")}
-          >
-            <FontAwesome6Icon name="money-bills" size={24} color="#FE7F2D" />
-            <Text style={[styles.navText, styles.customFont]}>Budget</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.navItem}
-            onPress={() => router.push("/profile")}
-          >
-            <MaterialCommunityIcons
-              name="account-settings"
-              size={24}
-              color="#FE7F2D"
-            />
-            <Text style={[styles.navText, styles.customFont]}>Profile</Text>
-          </TouchableOpacity>
+              <Text style={[styles.navText, styles.customFont]}>Profile</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      )}
 
       <Toast config={toastConfig} />
     </View>
@@ -1064,6 +1094,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'IstokWeb-Regular',
     color: '#FFFFFF',
+  },
+  modalKeyboardAvoidingView: {
+    flex: 1,
+    justifyContent: 'center',
   },
 });
 

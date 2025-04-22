@@ -1,17 +1,16 @@
-import React from "react";
+import React, { useState } from "react";
 import { useFonts } from "expo-font";
 import { 
   View, Text, TextInput, TouchableOpacity, Image, StyleSheet, ActivityIndicator 
 } from "react-native";
-import { useRouter } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-const ForgotPasswordScreen: React.FC = () => {
-  const router = useRouter();
-
+const NewPasswordScreen: React.FC = () => {
   const [fontsLoaded] = useFonts({
     "IstokWeb-Bold": require("../assets/fonts/IstokWeb-Bold.ttf"),
   });
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   if (!fontsLoaded) {
     return <ActivityIndicator size="large" color="#FF7F32" style={styles.loader} />;
@@ -19,14 +18,6 @@ const ForgotPasswordScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {/* Custom Back Button */}
-      <TouchableOpacity 
-        style={styles.backButton}
-        onPress={() => router.back()}
-      >
-        <MaterialCommunityIcons name="keyboard-return" size={24} color="#FE7F2D" />
-      </TouchableOpacity>
-
       {/* Logo */}
       <Image
         source={require("../assets/images/logo/smartbites-high-resolution-logo-transparent.png")}
@@ -34,35 +25,53 @@ const ForgotPasswordScreen: React.FC = () => {
       />
 
       {/* Title and Subtitle */}
-      <Text style={styles.title}>Password Reset</Text>
+      <Text style={styles.title}>Create New Password</Text>
       <Text style={styles.subtitle}>
-        Provide the email address associated with your account to recover your password
+        Please enter your new password and confirm it
       </Text>
 
-      {/* Email Input */}
-      <Text style={styles.label}>Email Address:</Text>
+      {/* New Password Input */}
+      <Text style={styles.label}>New Password:</Text>
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
-          placeholder="Email Address"
+          placeholder="New Password"
           placeholderTextColor="#B0B0B0"
-          keyboardType="email-address"
+          secureTextEntry={!showNewPassword}
           autoCapitalize="none"
         />
-      </View>
-
-      {/* Reset Button */}
-      <TouchableOpacity style={styles.resetButton}>
-        <Text style={styles.resetButtonText}>Reset password</Text>
-      </TouchableOpacity>
-
-      {/* Signup Link */}
-      <View style={styles.signupContainer}>
-        <Text style={styles.signupText}>Don't have an account? </Text>
-        <TouchableOpacity onPress={() => router.push("/sign_up")}>
-          <Text style={styles.signupLink}>Sign Up</Text>
+        <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)}>
+          <MaterialCommunityIcons 
+            name={showNewPassword ? "eye-off" : "eye"} 
+            size={24} 
+            color="#B0B0B0" 
+          />
         </TouchableOpacity>
       </View>
+
+      {/* Confirm New Password Input */}
+      <Text style={styles.label}>Re-enter New Password:</Text>
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Re-enter New Password"
+          placeholderTextColor="#B0B0B0"
+          secureTextEntry={!showConfirmPassword}
+          autoCapitalize="none"
+        />
+        <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+          <MaterialCommunityIcons 
+            name={showConfirmPassword ? "eye-off" : "eye"} 
+            size={24} 
+            color="#B0B0B0" 
+          />
+        </TouchableOpacity>
+      </View>
+
+      {/* Submit Button */}
+      <TouchableOpacity style={styles.resetButton}>
+        <Text style={styles.resetButtonText}>Update Password</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -74,12 +83,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 50,
-  },
-  backButton: {
-    position: "absolute",
-    top: 50,
-    left: 20,
-    zIndex: 1,
   },
   logo: {
     width: 120,
@@ -118,7 +121,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 10,
     height: 50,
-    marginBottom: 10,
+    marginBottom: 20,
   },
   input: {
     flex: 1,
@@ -141,20 +144,6 @@ const styles = StyleSheet.create({
     fontFamily: "IstokWeb-Bold",
     color: "#FBFCF8",
   },
-  signupContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  signupText: {
-    fontSize: 14,
-    fontFamily: "IstokWeb-Bold",
-    color: "#FBFCF8",
-  },
-  signupLink: {
-    color: "#E0FF4F",
-    fontWeight: "bold",
-    fontFamily: "IstokWeb-Bold",
-  },
   loader: {
     flex: 1,
     justifyContent: "center",
@@ -162,4 +151,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ForgotPasswordScreen;
+export default NewPasswordScreen;
