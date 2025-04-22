@@ -393,7 +393,6 @@ const [profile, setProfile] = useState<Profile>({
     }
   };
   
-  // Add this error handling function
   const handlePasswordErrors = (errors: any) => {
     const newErrors: Errors = {};
     
@@ -417,7 +416,6 @@ const [profile, setProfile] = useState<Profile>({
   };
   
   const handleCancelPasswordChange = () => {
-    // Reset any password-related errors
     setErrors(prev => ({
       ...prev,
       currentPassword: undefined,
@@ -425,7 +423,6 @@ const [profile, setProfile] = useState<Profile>({
       confirmPassword: undefined
     }));
     
-    // Close the modal without saving changes
     setShowPasswordModal(false);
   };
 

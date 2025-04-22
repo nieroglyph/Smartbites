@@ -49,7 +49,7 @@ const HomeScreen = () => {
   const [menuVisibleId, setMenuVisibleId] = useState<number | null>(null);
   const deletionTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  // Animation refs
+  // empy recipes animation  
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const slideUpAnim = useRef(new Animated.Value(20)).current;
@@ -983,7 +983,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#333",
   },
-  // New modal styles
   blurView: {
     flex: 1,
     justifyContent: 'center',

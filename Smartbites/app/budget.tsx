@@ -131,7 +131,6 @@ const BudgetScreen = () => {
     }
   );
 
-  // Rest of the component remains the same...
   useEffect(() => {
     const keyboardDidShowListener = Keyboard.addListener(
       'keyboardDidShow',

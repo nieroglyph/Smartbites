@@ -306,7 +306,7 @@ const UserprofileScreen = () => {
     }
     try {
       await updateProfile({ budget: budgetValue });
-      setSelectedAllowance(option); // You might not need this line if you're not using frequency anymore.
+      setSelectedAllowance(option);
       setShowAllowanceOptions(false);
     } catch (error) {
       Alert.alert("Error", "Failed to update budget");

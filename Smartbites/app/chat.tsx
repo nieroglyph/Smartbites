@@ -255,7 +255,6 @@ const ChatScreen = () => {
               responseInterval.current = null;
             }
             setIsAIResponding(false);
-            // Reset to initial message and save
             const newMessages = [{
               id: 1,
               text: "Hello! I'm your SmartBites assistant. How can I help you today?",
@@ -519,7 +518,7 @@ const ChatScreen = () => {
       return true;
       
     } catch (error: unknown) {
-      throw error; // Just re-throw instead of handling here
+      throw error;
     }
   };
 

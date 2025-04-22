@@ -7,7 +7,7 @@ import {
   Image, 
   StyleSheet, 
   View, 
-  Text  // Added Text import
+  Text
 } from 'react-native';
 
 interface PhotoPreviewSectionProps {

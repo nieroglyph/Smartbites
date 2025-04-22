@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
   centerContainer: {
     flex: 1,
     justifyContent: "center",
-    marginTop: -120, // Adjust this value to fine-tune the vertical position
+    marginTop: -120,
   },
   formContainer: {
     width: "100%",

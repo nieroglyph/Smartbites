@@ -7,20 +7,17 @@ const LogoutSplashScreen: React.FC = () => {
   const router = useRouter();
   const progressAnim = React.useRef(new Animated.Value(0)).current;
 
-  // Load the font
   const [fontsLoaded] = useFonts({
     'IstokWeb-Bold': require('../assets/fonts/IstokWeb-Bold.ttf'),
   });
 
   useEffect(() => {
-    // Start progress bar animation
     Animated.timing(progressAnim, {
       toValue: 1,
       duration: 2000,
       useNativeDriver: false,
     }).start();
 
-    // Redirect after 2 seconds
     const timer = setTimeout(() => {
       router.replace('/login');
     }, 2000);
@@ -33,7 +30,6 @@ const LogoutSplashScreen: React.FC = () => {
     outputRange: ['0%', '100%'],
   });
 
-  // Don't render until fonts are loaded
   if (!fontsLoaded) {
     return null;
   }
