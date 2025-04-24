@@ -2,6 +2,17 @@ import { ToastConfig } from 'react-native-toast-message';
 import { View, Text, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
+type MyToastTypes = {
+  success: {
+    text1: string;
+    text2?: string;
+  };
+  error: {
+    text1: string;
+    text2?: string;
+  };
+};
+
 const styles = StyleSheet.create({
   baseToast: {
     padding: 14,
@@ -42,8 +53,8 @@ const styles = StyleSheet.create({
   }
 });
 
-export const toastConfig: ToastConfig = {
-  success: ({ text1, text2 }) => (
+export const toastConfig: ToastConfig<MyToastTypes> = {
+  success: ({ text1, text2 }: MyToastTypes['success']) => (
     <View style={[styles.baseToast, styles.successToast]}>
       <Icon name="check-circle" size={20} color="#4BB543" />
       <View style={styles.textContainer}>
@@ -52,7 +63,8 @@ export const toastConfig: ToastConfig = {
       </View>
     </View>
   ),
-  error: ({ text1, text2 }) => (
+
+  error: ({ text1, text2 }: MyToastTypes['error']) => (
     <View style={[styles.baseToast, styles.errorToast]}>
       <Icon name="error-outline" size={20} color="#FF4444" />
       <View style={styles.textContainer}>

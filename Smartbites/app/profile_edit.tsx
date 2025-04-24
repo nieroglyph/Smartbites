@@ -26,7 +26,6 @@ import { router } from 'expo-router';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import useUserProfile from './hooks/useUserProfile';
 import Toast from 'react-native-toast-message';
-import { toastConfig } from './hooks/toastConfig';
 
 interface Profile {
   name: string;
@@ -693,7 +692,6 @@ const [profile, setProfile] = useState<Profile>({
           </BlurView>
         </TouchableWithoutFeedback>
       </Modal>
-      <Toast config={toastConfig} />
     </View>
   );
 };

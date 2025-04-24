@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { View } from 'react-native';
+import Toast from 'react-native-toast-message';
+import { toastConfig } from './hooks/toastConfig';
 
 export default function RootLayout() {
   return (
@@ -25,6 +26,12 @@ export default function RootLayout() {
         <Stack.Screen name="userprofile" options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name="faq" options={{ headerShown: false, gestureEnabled: false }} />
       </Stack>
+      <Toast 
+        config={toastConfig}
+        topOffset={40}
+        visibilityTime={3000}
+        position="top"
+      />
     </GestureHandlerRootView>
   );
 }

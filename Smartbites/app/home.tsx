@@ -30,7 +30,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import Toast from "react-native-toast-message";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import useUserRecipes, { Recipe } from "./hooks/useUserRecipes";
-import { toastConfig } from "./hooks/toastConfig";
 
 const HomeScreen = () => {
   const router = useRouter();
@@ -749,8 +748,6 @@ const HomeScreen = () => {
           </View>
         </View>
       )}
-
-      <Toast config={toastConfig} />
     </View>
   );
 };

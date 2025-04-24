@@ -23,7 +23,6 @@ import * as ImagePicker from "expo-image-picker";
 import { CameraView, useCameraPermissions, CameraType } from "expo-camera";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Toast from "react-native-toast-message";
-import { toastConfig } from "./hooks/toastConfig";
 
 interface Message {
   id: number;
@@ -1178,7 +1177,6 @@ const ChatScreen = () => {
           </View>
         )}
       </View>
-      <Toast config={toastConfig} />
     </KeyboardAvoidingView>
   );
 };

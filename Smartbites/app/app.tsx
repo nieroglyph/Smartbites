@@ -118,12 +118,6 @@ export default function App() {
           />
         )}
       </RootStack.Navigator>
-      <Toast
-        config={toastConfig}
-        topOffset={40}
-        visibilityTime={3000}
-        position="top"
-      />
       <StatusBar style="light" />
     </View>
   );
@@ -135,11 +129,3 @@ const styles = StyleSheet.create({
     backgroundColor: "#00272B",
   },
 });
-
-declare module "react-native-toast-message" {
-  interface ToastConfig {
-    success: (props: { text1: string; text2?: string }) => React.ReactNode;
-    error: (props: { text1: string; text2?: string }) => React.ReactNode;
-    [key: string]: (props: any) => React.ReactNode;
-  }
-}
