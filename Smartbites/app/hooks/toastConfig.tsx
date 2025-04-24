@@ -38,6 +38,7 @@ const styles = StyleSheet.create({
     color: '#444',
     fontSize: 13,
     marginTop: 2,
+    lineHeight: 18,
   }
 });
 
@@ -47,7 +48,7 @@ export const toastConfig: ToastConfig = {
       <Icon name="check-circle" size={20} color="#4BB543" />
       <View style={styles.textContainer}>
         <Text style={styles.title}>{text1}</Text>
-        {text2 && <Text style={styles.message}>{text2}</Text>}
+        {text2 && <Text style={styles.message} numberOfLines={4}>{text2}</Text>}
       </View>
     </View>
   ),
@@ -56,7 +57,7 @@ export const toastConfig: ToastConfig = {
       <Icon name="error-outline" size={20} color="#FF4444" />
       <View style={styles.textContainer}>
         <Text style={styles.title}>{text1}</Text>
-        {text2 && <Text style={styles.message}>{text2}</Text>}
+        {text2 && <Text style={styles.message} numberOfLines={4}>{text2}</Text>}
       </View>
     </View>
   ),

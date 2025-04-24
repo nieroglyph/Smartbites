@@ -288,7 +288,7 @@ const HomeScreen = () => {
       }
       setShowUndo(false);
       setDeletedRecipeIds([]);
-    }, 5000);
+    }, 3000);
 
     setUndoQueue(prev => [
       // New messages appear on top
