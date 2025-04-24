@@ -23,7 +23,7 @@ export default function useUserRecipes() {
       if (!token) throw new Error("No auth token");
       
       const res = await fetch(
-        "http://192.168.1.9:8000/api/get-user-recipes/",
+        "http://192.168.100.10:8000/api/get-user-recipes/",
         { headers: { Authorization: `Token ${token}` } }
       );
       

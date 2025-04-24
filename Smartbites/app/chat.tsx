@@ -434,7 +434,7 @@ const ChatScreen = () => {
           return false;
         }
         const response = await fetch(
-          "http://192.168.1.9:8000/api/query-ollama/",
+          "http://192.168.100.10:8000/api/query-ollama/",
           {
             method: "POST",
             headers: {
@@ -501,7 +501,7 @@ const ChatScreen = () => {
       const token = await AsyncStorage.getItem("authToken");
       if (!token) throw new Error("Not authenticated");
   
-      const response = await fetch("http://192.168.1.9:8000/api/save-recipe/", {
+      const response = await fetch("http://192.168.100.10:8000/api/save-recipe/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

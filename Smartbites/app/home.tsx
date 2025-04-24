@@ -17,7 +17,7 @@ import {
   Pressable,
   Keyboard,
   KeyboardAvoidingView,
-  Platform
+  Platform,
 } from "react-native";
 import { useFonts } from "expo-font";
 import { useRouter } from "expo-router";
@@ -52,17 +52,25 @@ const HomeScreen = () => {
   const [menuVisibleId, setMenuVisibleId] = useState<number | null>(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const deletionTimeout = useRef<NodeJS.Timeout | null>(null);
+  const [undoQueue, setUndoQueue] = useState<
+    Array<{
+      id: string;
+      ids: number[];
+      recipes: Recipe[];
+      timeout: NodeJS.Timeout;
+    }>
+  >([]);
 
   // Keyboard visibility effect
   useEffect(() => {
     const keyboardDidShowListener = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
       () => {
         setKeyboardVisible(true);
       }
     );
     const keyboardDidHideListener = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
       () => {
         setKeyboardVisible(false);
       }
@@ -87,7 +95,7 @@ const HomeScreen = () => {
       fadeAnim.setValue(0);
       scaleAnim.setValue(0.9);
       slideUpAnim.setValue(20);
-      
+
       Animated.sequence([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -190,7 +198,7 @@ const HomeScreen = () => {
 
     try {
       const res = await fetch(
-        `http://192.168.1.9:8000/api/update-recipe/${editingRecipe.id}/`,
+        `http://192.168.100.10:8000/api/update-recipe/${editingRecipe.id}/`,
         {
           method: "PUT",
           headers: {
@@ -228,6 +236,7 @@ const HomeScreen = () => {
   };
 
   const handleDelete = (ids: number[]) => {
+    const deletionId = Date.now().toString();
     const deletedItems = recipes.filter((r) => ids.includes(r.id));
     setDeletedRecipeIds(ids);
     setDeletedRecipes(deletedItems);
@@ -242,7 +251,7 @@ const HomeScreen = () => {
 
         if (ids.length === 1) {
           await fetch(
-            `http://192.168.1.9:8000/api/delete-recipe/${ids[0]}/`,
+            `http://192.168.100.10:8000/api/delete-recipe/${ids[0]}/`,
             {
               method: "DELETE",
               headers: { Authorization: `Token ${token}` },
@@ -250,7 +259,7 @@ const HomeScreen = () => {
           );
         } else {
           await fetch(
-            "http://192.168.1.9:8000/api/delete-multiple-recipes/",
+            "http://192.168.100.10:8000/api/delete-multiple-recipes/",
             {
               method: "POST",
               headers: {
@@ -261,6 +270,7 @@ const HomeScreen = () => {
             }
           );
         }
+        setUndoQueue((prev) => prev.filter((item) => item.id !== deletionId));
 
         await refresh();
         Toast.show({
@@ -278,8 +288,29 @@ const HomeScreen = () => {
       }
       setShowUndo(false);
       setDeletedRecipeIds([]);
-    }, 7000);
+    }, 5000);
+
+    setUndoQueue(prev => [
+      // New messages appear on top
+      {
+        id: deletionId,
+        ids,
+        recipes: deletedItems,
+        timeout: deletionTimeout.current!
+      },
+      ...prev
+    ]);
+  
+    setRecipes(prev => prev.filter(r => !ids.includes(r.id)));
   };
+
+  useEffect(() => {
+    return () => {
+      if (deletionTimeout.current) {
+        clearTimeout(deletionTimeout.current);
+      }
+    };
+  }, []);
 
   const deleteRecipe = (id: number) => {
     handleDelete([id]);
@@ -291,14 +322,15 @@ const HomeScreen = () => {
     setSelectedRecipes([]);
   };
 
-  const handleUndo = () => {
-    if (deletionTimeout.current) {
-      clearTimeout(deletionTimeout.current);
-    }
-    setRecipes((prev) => [...prev, ...deletedRecipes]);
-    setShowUndo(false);
-    setDeletedRecipes([]);
-    setDeletedRecipeIds([]);
+  const handleUndo = (deletionId: string) => {
+    setUndoQueue((prev) => {
+      const item = prev.find((i) => i.id === deletionId);
+      if (item) {
+        clearTimeout(item.timeout);
+        setRecipes((prevRecipes) => [...prevRecipes, ...item.recipes]);
+      }
+      return prev.filter((i) => i.id !== deletionId);
+    });
   };
 
   if (!fontsLoaded) return null;
@@ -310,7 +342,12 @@ const HomeScreen = () => {
         style={styles.logo}
       />
 
-      <View style={[styles.foodContainer, { paddingTop: recipes.length > 0 ? 10 : 0 }]}>
+      <View
+        style={[
+          styles.foodContainer,
+          { paddingTop: recipes.length > 0 ? 10 : 0 },
+        ]}
+      >
         {recipes.length > 0 && (
           <View style={styles.recentFoodsTitle}>
             <Icon name="restaurant-menu" size={24} color="#FE7F2D" />
@@ -368,7 +405,12 @@ const HomeScreen = () => {
                   end={{ x: 1, y: 0 }}
                 >
                   <View style={styles.buttonContent}>
-                    <Icon name="search" size={16} color="white" style={styles.buttonIcon} />
+                    <Icon
+                      name="search"
+                      size={16}
+                      color="white"
+                      style={styles.buttonIcon}
+                    />
                     <Text style={styles.emptyButtonText}>Discover Recipes</Text>
                   </View>
                 </LinearGradient>
@@ -376,7 +418,12 @@ const HomeScreen = () => {
             </LinearGradient>
             <View style={styles.emptyTipContainer}>
               <View style={styles.tipContent}>
-                <Icon name="lightbulb" size={14} color="#FE7F2D" style={styles.tipIcon} />
+                <Icon
+                  name="lightbulb"
+                  size={14}
+                  color="#FE7F2D"
+                  style={styles.tipIcon}
+                />
                 <Text style={styles.emptyTipText}>
                   Tip: Our BiteAI can suggest recipes based on your preferences
                 </Text>
@@ -432,11 +479,11 @@ const HomeScreen = () => {
                         <Icon name="check" size={20} color="white" />
                       </View>
                     )}
-                    
+
                     <View style={styles.recipeContent}>
-                      <Text 
-                        style={[styles.recipeTitle, styles.customFont]} 
-                        numberOfLines={isExpanded ? 0 : 1} 
+                      <Text
+                        style={[styles.recipeTitle, styles.customFont]}
+                        numberOfLines={isExpanded ? 0 : 1}
                         ellipsizeMode="tail"
                       >
                         {r.title}
@@ -446,16 +493,16 @@ const HomeScreen = () => {
                         {r.cost != null && <> • ₱{costNum.toFixed(2)}</>}
                       </Text>
                       {!isExpanded && (
-                        <Text 
-                          style={styles.recipeSnippet} 
-                          numberOfLines={1} 
+                        <Text
+                          style={styles.recipeSnippet}
+                          numberOfLines={1}
                           ellipsizeMode="tail"
                         >
                           {r.ingredients.split("\n")[0]}…
                         </Text>
                       )}
                     </View>
-                    
+
                     {isExpanded && (
                       <View style={styles.expandedDetails}>
                         <Text style={styles.sectionHeader}>Ingredients:</Text>
@@ -475,7 +522,7 @@ const HomeScreen = () => {
                   >
                     <Icon name="more-vert" size={24} color="#555" />
                   </TouchableOpacity>
-                  
+
                   {menuVisibleId === r.id && (
                     <View style={styles.menuDropdown}>
                       <TouchableOpacity
@@ -490,7 +537,12 @@ const HomeScreen = () => {
                           setMenuVisibleId(null);
                         }}
                       >
-                        <Icon name="edit" size={18} color="#3498DB" style={styles.menuIcon} />
+                        <Icon
+                          name="edit"
+                          size={18}
+                          color="#3498DB"
+                          style={styles.menuIcon}
+                        />
                         <Text style={styles.menuText}>Edit</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
@@ -500,7 +552,12 @@ const HomeScreen = () => {
                           deleteRecipe(r.id);
                         }}
                       >
-                        <Icon name="delete" size={18} color="#E74C3C" style={styles.menuIcon} />
+                        <Icon
+                          name="delete"
+                          size={18}
+                          color="#E74C3C"
+                          style={styles.menuIcon}
+                        />
                         <Text style={styles.menuText}>Delete</Text>
                       </TouchableOpacity>
                     </View>
@@ -523,27 +580,23 @@ const HomeScreen = () => {
           style={styles.modalKeyboardAvoidingView}
         >
           <TouchableWithoutFeedback onPress={() => setEditingRecipe(null)}>
-            <BlurView
-              style={styles.blurView}
-              intensity={20}
-              tint="dark"
-            >
+            <BlurView style={styles.blurView} intensity={20} tint="dark">
               <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
-                <Animated.View 
+                <Animated.View
                   style={[
                     styles.animatedModalView,
                     {
                       transform: [
                         { scale: modalScaleAnim },
-                        { translateY: modalSlideAnim }
+                        { translateY: modalSlideAnim },
                       ],
                       opacity: modalOpacityAnim,
-                    }
+                    },
                   ]}
                 >
                   <View style={styles.modalContent}>
                     <Text style={styles.modalTitle}>Edit Recipe</Text>
-                    
+
                     <Text style={styles.inputLabel}>Recipe Title</Text>
                     <TextInput
                       style={styles.textInput}
@@ -606,14 +659,26 @@ const HomeScreen = () => {
       </Modal>
 
       {showUndo && (
-        <View style={styles.undoToast}>
-          <Text style={styles.undoText}>
-            {deletedRecipeIds.length} recipe
-            {deletedRecipeIds.length > 1 ? "s" : ""} deleted
-          </Text>
-          <TouchableOpacity onPress={handleUndo}>
-            <Text style={styles.undoButton}>UNDO</Text>
-          </TouchableOpacity>
+        <View style={styles.undoToastContainer}>
+          {undoQueue.map((item, index) => (
+            <View
+              key={item.id}
+              style={[
+                styles.undoToast,
+                {
+                  bottom: 20 + index * 70, // Stack toasts vertically
+                  zIndex: 1000 - index, // Ensure newer toasts stay on top
+                },
+              ]}
+            >
+              <Text style={styles.undoText}>
+                {item.ids.length} recipe{item.ids.length > 1 ? "s" : ""} deleted
+              </Text>
+              <TouchableOpacity onPress={() => handleUndo(item.id)}>
+                <Text style={styles.undoButton}>UNDO</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
         </View>
       )}
 
@@ -727,8 +792,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 5,
-    overflow: 'visible',
-    position: 'relative',
+    overflow: "visible",
+    position: "relative",
   },
   foodItemTouchable: {
     padding: 12,
@@ -740,20 +805,20 @@ const styles = StyleSheet.create({
   recipeContent: {
     flex: 1,
   },
-  recipeTitle: { 
-    fontSize: 16, 
-    marginBottom: 4, 
+  recipeTitle: {
+    fontSize: 16,
+    marginBottom: 4,
     color: "#2E2E2E",
   },
-  recipeMeta: { 
-    fontSize: 12, 
-    color: "#555", 
-    marginBottom: 8 
+  recipeMeta: {
+    fontSize: 12,
+    color: "#555",
+    marginBottom: 8,
   },
-  recipeSnippet: { 
-    fontSize: 14, 
-    color: "#333", 
-    marginTop: 8 
+  recipeSnippet: {
+    fontSize: 14,
+    color: "#333",
+    marginTop: 8,
   },
   expandedDetails: {
     marginTop: 12,
@@ -824,10 +889,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   emptyButtonText: {
-    color: 'white',
+    color: "white",
     fontSize: 14,
-    fontFamily: 'IstokWeb-Regular',
-    fontWeight: '600',
+    fontFamily: "IstokWeb-Regular",
+    fontWeight: "600",
   },
   emptyTipContainer: {
     marginTop: 25,
@@ -837,9 +902,9 @@ const styles = StyleSheet.create({
   },
   emptyTipText: {
     fontSize: 12,
-    color: '#FE7F2D',
-    fontFamily: 'IstokWeb-Regular',
-    fontStyle: 'italic',
+    color: "#FE7F2D",
+    fontFamily: "IstokWeb-Regular",
+    fontStyle: "italic",
   },
   navContainer: {
     position: "absolute",
@@ -898,18 +963,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     zIndex: 2,
   },
-  undoToast: {
-    position: "absolute",
-    bottom: 80,
-    zIndex: 100,
+  undoToastContainer: {
+    position: 'absolute',
     left: 20,
     right: 20,
-    backgroundColor: "rgba(0,0,0,0.9)",
+    bottom: 60,
+    zIndex: 9999,
+  },
+  undoToast: {
+    position: 'absolute',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    backgroundColor: 'rgba(0,0,0,0.9)',
     padding: 16,
     borderRadius: 8,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    marginVertical: 4,
   },
   undoText: {
     color: "white",
@@ -960,18 +1030,18 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
   },
   buttonIcon: {
     marginRight: 8,
     marginTop: 1,
   },
   tipContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
   },
   tipIcon: {
     marginRight: 6,
@@ -983,7 +1053,7 @@ const styles = StyleSheet.create({
     right: 8,
     zIndex: 10,
     padding: 8,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   menuDropdown: {
     position: "absolute",
@@ -1015,12 +1085,12 @@ const styles = StyleSheet.create({
   },
   blurView: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.35)",
   },
   animatedModalView: {
-    width: '90%',
+    width: "90%",
     maxWidth: 400,
   },
   modalContent: {
@@ -1028,7 +1098,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#002F38",
     padding: 20,
     borderRadius: 12,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.5,
     shadowRadius: 12,
@@ -1041,18 +1111,18 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginBottom: 20,
     color: "#E0FF4F",
-    textAlign: 'center',
-    fontFamily: 'IstokWeb-Regular',
+    textAlign: "center",
+    fontFamily: "IstokWeb-Regular",
   },
   inputLabel: {
     fontSize: 14,
     marginBottom: 8,
     color: "#FE7F2D",
-    fontFamily: 'IstokWeb-Regular',
-    fontWeight: '500',
+    fontFamily: "IstokWeb-Regular",
+    fontWeight: "500",
   },
   textInput: {
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    backgroundColor: "rgba(255,255,255,0.9)",
     borderWidth: 1,
     borderColor: "#2D2F2F",
     borderRadius: 8,
@@ -1060,15 +1130,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     fontSize: 14,
     color: "#1D1F1F",
-    fontFamily: 'IstokWeb-Regular',
+    fontFamily: "IstokWeb-Regular",
   },
   messageInput: {
     height: 100,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   modalButtonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginTop: 16,
   },
   modalButton: {
@@ -1076,28 +1146,28 @@ const styles = StyleSheet.create({
     padding: 14,
     elevation: 0,
     minWidth: 100,
-    alignItems: 'center',
+    alignItems: "center",
     flex: 1,
   },
   modalButtonClose: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: "rgba(255,255,255,0.1)",
     marginRight: 8,
     borderWidth: 1,
-    borderColor: '#434545',
+    borderColor: "#434545",
   },
   modalButtonSubmit: {
-    backgroundColor: '#FE7F2D',
+    backgroundColor: "#FE7F2D",
     marginLeft: 3,
   },
   modalButtonText: {
-    fontWeight: '600',
+    fontWeight: "600",
     fontSize: 14,
-    fontFamily: 'IstokWeb-Regular',
-    color: '#FFFFFF',
+    fontFamily: "IstokWeb-Regular",
+    color: "#FFFFFF",
   },
   modalKeyboardAvoidingView: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
 });
 

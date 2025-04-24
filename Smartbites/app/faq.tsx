@@ -73,7 +73,7 @@ const FAQScreen = () => {
     }
   ];
   const handleContactUs = () => {
-    Linking.openURL('mailto:support@smartbites.com?subject=SmartBites%20Inquiry');
+    Linking.openURL('mailto:dt.smartbites@gmail.com?subject=SmartBites%20Inquiry');
   };
 
   if (!fontsLoaded) {
