@@ -25,6 +25,8 @@ import PhotoPreviewSection from './photo_preview_section';
 import { router } from 'expo-router';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import useUserProfile from './hooks/useUserProfile';
+import Toast from 'react-native-toast-message';
+import { toastConfig } from './hooks/toastConfig';
 
 interface Profile {
   name: string;
@@ -246,15 +248,27 @@ const [profile, setProfile] = useState<Profile>({
       });
   
       if (response.ok) {
-        Alert.alert('Success', 'Profile updated successfully!');
+        Toast.show({
+          type: "success",
+          text1: "Profile Updated",
+          text2: "Your changes were saved successfully"
+        });
         router.back();
       } else {
         const errorData = await response.json();
-        Alert.alert('Error', errorData.detail || 'Failed to update profile');
+        Toast.show({
+          type: "error",
+          text1: "Update Failed",
+          text2: errorData.detail || 'Could not save profile changes'
+        });
       }
     } catch (error) {
       console.error("Update error:", error);
-      Alert.alert('Error', 'Failed to update profile');
+      Toast.show({
+        type: "error",
+        text1: "Network Error",
+        text2: "Failed to connect to the server"
+      });
     }
   };
 
@@ -679,6 +693,7 @@ const [profile, setProfile] = useState<Profile>({
           </BlurView>
         </TouchableWithoutFeedback>
       </Modal>
+      <Toast config={toastConfig} />
     </View>
   );
 };
