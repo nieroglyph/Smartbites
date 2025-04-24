@@ -22,6 +22,8 @@ import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { CameraView, useCameraPermissions, CameraType } from "expo-camera";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Toast from "react-native-toast-message";
+import { toastConfig } from "./hooks/toastConfig";
 
 interface Message {
   id: number;
@@ -691,25 +693,33 @@ const ChatScreen = () => {
   
       // Show consolidated alert
       const messageParts = [];
-      if (successCount > 0) messageParts.push(`Saved ${successCount} new recipes`);
-      if (duplicateCount > 0) messageParts.push(`${duplicateCount} duplicates skipped`);
-      if (errorCount > 0) messageParts.push(`${errorCount} errors occurred`);
-  
+      if (successCount > 0) messageParts.push(`✓ Saved ${successCount} new recipes`);
+      if (duplicateCount > 0) messageParts.push(`↻ ${duplicateCount} duplicates skipped`);
+      if (errorCount > 0) messageParts.push(`✗ ${errorCount} errors occurred`);
+      
       if (messageParts.length > 0) {
-        let alertMessage = messageParts.join("\n");
+        let toastMessage = messageParts.join("\n");
         
         if (errorMessages.length > 0) {
-          alertMessage += `\n\nErrors:\n${errorMessages.slice(0, 3).join("\n")}`;
-          if (errorMessages.length > 3) alertMessage += `\n...and ${errorMessages.length - 3} more`;
+          toastMessage += `\n\nErrors:\n${errorMessages.slice(0, 3).join("\n")}`;
+          if (errorMessages.length > 3) toastMessage += `\n...and ${errorMessages.length - 3} more`;
         }
-  
-        Alert.alert("Save Complete", alertMessage);
+      
+        Toast.show({
+          type: "success",
+          text1: "Save Complete",
+          text2: toastMessage,
+        });
       }
-  
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      Alert.alert("Error", `Failed to save recipes: ${errorMessage}`);
-    }
+      
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        Toast.show({
+          type: "error",
+          text1: "Save Failed",
+          text2: `Failed to save recipes: ${errorMessage}`,
+        });
+      }
   };
 
   const pickImage = async (source: "gallery" | "camera") => {
@@ -1168,6 +1178,7 @@ const ChatScreen = () => {
           </View>
         )}
       </View>
+      <Toast config={toastConfig} />
     </KeyboardAvoidingView>
   );
 };
