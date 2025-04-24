@@ -23,6 +23,7 @@ import { useFonts } from "expo-font";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BlurView } from "expo-blur";
 import useUserProfile from "./hooks/useUserProfile";
+import Toast from 'react-native-toast-message';
 
 type IoniconsName =
   | "person-outline"
@@ -150,11 +151,11 @@ const UserprofileScreen = () => {
   }, [showAllowanceOptions, showDietOptions]);
 
   const showAlert = (message: string) => {
-    if (Platform.OS === "android") {
-      ToastAndroid.show(message, ToastAndroid.SHORT);
-    } else {
-      Alert.alert("Invalid Input", message);
-    }
+    Toast.show({
+      type: "error",
+      text1: "Validation Error",
+      text2: message,
+    });
   };
 
   const updateProfile = async (data: {
@@ -188,11 +189,12 @@ const UserprofileScreen = () => {
 
       return true;
     } catch (error: unknown) {
-      if (error instanceof Error) {
-        Alert.alert("Error", error.message);
-      } else {
-        Alert.alert("Error", String(error));
-      }
+      const message = error instanceof Error ? error.message : String(error);
+      Toast.show({
+        type: "error",
+        text1: "Update Failed",
+        text2: message,
+      });
       return false;
     }
   };
@@ -208,8 +210,8 @@ const UserprofileScreen = () => {
 
   if (error) {
     return (
-      <View>
-        <Text>Error loading profile: {error}</Text>
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>Error loading profile: {error}</Text>
       </View>
     );
   }
@@ -267,6 +269,11 @@ const UserprofileScreen = () => {
       dietary_preference: option.toLowerCase(),
     });
     if (success) {
+      Toast.show({
+        type: "success",
+        text1: "Diet Updated",
+        text2: `Your dietary preference is now ${option}`,
+      });
       setSelectedDiet(option);
     }
   };
@@ -282,7 +289,11 @@ const UserprofileScreen = () => {
     });
 
     if (success) {
-      showAlert("Budget updated!");
+      Toast.show({
+        type: "success",
+        text1: "Budget Updated",
+        text2: "Your spending limit has been saved",
+      });
       setShowAllowanceOptions(false);
     }
   };
@@ -292,24 +303,12 @@ const UserprofileScreen = () => {
       allergies: selectedAllergies.join(", "),
     });
     if (success) {
+      Toast.show({
+        type: "success",
+        text1: "Allergies Saved",
+        text2: "Your dietary restrictions have been updated",
+      });
       setShowAllergiesModal(false);
-    }
-  };
-
-  const handleAllowanceSelect = async (option: string) => {
-    // For example, if the UI now allows the user to enter a custom budget,
-    // then you would convert the allowanceAmount (which is a string) to a number.
-    const budgetValue = Number(allowanceAmount);
-    if (isNaN(budgetValue)) {
-      showAlert("Please enter a valid number for budget.");
-      return;
-    }
-    try {
-      await updateProfile({ budget: budgetValue });
-      setSelectedAllowance(option);
-      setShowAllowanceOptions(false);
-    } catch (error) {
-      Alert.alert("Error", "Failed to update budget");
     }
   };
 
@@ -1091,6 +1090,17 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 15,
     paddingHorizontal: 10,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    color: '#E74C3C',
+    fontSize: 16,
+    textAlign: 'center',
   },
 });
 
