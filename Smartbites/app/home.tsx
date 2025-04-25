@@ -59,8 +59,7 @@ const HomeScreen = () => {
       timeout: NodeJS.Timeout;
     }>
   >([]);
-
-  // Keyboard visibility effect
+  
   useEffect(() => {
     const keyboardDidShowListener = Keyboard.addListener(
       Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
@@ -166,6 +165,8 @@ const HomeScreen = () => {
   }, [editingRecipe]);
 
   const handleLongPress = (recipeId: number) => {
+    // Close any open menu when entering selection mode
+    setMenuVisibleId(null);
     setSelectedRecipes((prev) =>
       prev.includes(recipeId)
         ? prev.filter((id) => id !== recipeId)
@@ -174,7 +175,14 @@ const HomeScreen = () => {
   };
 
   const toggleMenu = (recipeId: number) => {
-    setMenuVisibleId(menuVisibleId === recipeId ? null : recipeId);
+    // If the same menu is clicked, toggle it off
+    if (menuVisibleId === recipeId) {
+      setMenuVisibleId(null);
+    } 
+    // Otherwise, set the new menu as visible (closing any other open menu)
+    else {
+      setMenuVisibleId(recipeId);
+    }
   };
 
   const handleRefresh = async () => {
@@ -197,7 +205,7 @@ const HomeScreen = () => {
 
     try {
       const res = await fetch(
-        `http://192.168.100.10:8000/api/update-recipe/${editingRecipe.id}/`,
+        `http://192.168.1.9:8000/api/update-recipe/${editingRecipe.id}/`,
         {
           method: "PUT",
           headers: {
@@ -250,7 +258,7 @@ const HomeScreen = () => {
 
         if (ids.length === 1) {
           await fetch(
-            `http://192.168.100.10:8000/api/delete-recipe/${ids[0]}/`,
+            `http://192.168.1.9:8000/api/delete-recipe/${ids[0]}/`,
             {
               method: "DELETE",
               headers: { Authorization: `Token ${token}` },
@@ -258,7 +266,7 @@ const HomeScreen = () => {
           );
         } else {
           await fetch(
-            "http://192.168.100.10:8000/api/delete-multiple-recipes/",
+            "http://192.168.1.9:8000/api/delete-multiple-recipes/",
             {
               method: "POST",
               headers: {
@@ -335,420 +343,429 @@ const HomeScreen = () => {
   if (!fontsLoaded) return null;
 
   return (
-    <View style={styles.container}>
-      <Image
-        source={require("../assets/images/logo/smartbites-high-resolution-logo-transparent.png")}
-        style={styles.logo}
-      />
+    <TouchableWithoutFeedback onPress={() => setMenuVisibleId(null)}>
+      <View style={styles.container}>
+        <Image
+          source={require("../assets/images/logo/smartbites-high-resolution-logo-transparent.png")}
+          style={styles.logo}
+        />
 
-      <View
-        style={[
-          styles.foodContainer,
-          { paddingTop: recipes.length > 0 ? 10 : 0 },
-        ]}
-      >
-        {recipes.length > 0 && (
-          <View style={styles.recentFoodsTitle}>
-            <Icon name="restaurant-menu" size={24} color="#FE7F2D" />
-            <Text style={[styles.recentFoodsText, styles.customFont]}>
-              Your Saved Recipes
-            </Text>
-          </View>
-        )}
-
-        {loading ? (
-          <ActivityIndicator
-            size="large"
-            color="#FE7F2D"
-            style={{ marginTop: 20 }}
-          />
-        ) : error ? (
-          <Text style={styles.errorText}>{error}</Text>
-        ) : recipes.length === 0 ? (
-          <Animated.View
-            style={[
-              styles.emptyContainer,
-              {
-                opacity: fadeAnim,
-                transform: [{ scale: scaleAnim }, { translateY: slideUpAnim }],
-              },
-            ]}
-          >
-            <LinearGradient
-              colors={["#FFF", "#F9F9F9"]}
-              style={styles.emptyCard}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <View style={styles.emptyIconContainer}>
-                <Icon
-                  name="menu-book"
-                  size={60}
-                  color="#FE7F2D"
-                  style={styles.emptyIcon}
-                />
-              </View>
-              <Text style={styles.emptyTitle}>Your Cookbook is Empty</Text>
-              <Text style={styles.emptySubtitle}>
-                Save your favorite recipes to build your personal cookbook
-              </Text>
-              <TouchableOpacity
-                style={styles.emptyButton}
-                onPress={() => router.push("/chat")}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={["#FE7F2D", "#FF9F4D"]}
-                  style={styles.gradientButton}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                >
-                  <View style={styles.buttonContent}>
-                    <Icon
-                      name="search"
-                      size={16}
-                      color="white"
-                      style={styles.buttonIcon}
-                    />
-                    <Text style={styles.emptyButtonText}>Discover Recipes</Text>
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
-            </LinearGradient>
-            <View style={styles.emptyTipContainer}>
-              <View style={styles.tipContent}>
-                <Icon
-                  name="lightbulb"
-                  size={14}
-                  color="#FE7F2D"
-                  style={styles.tipIcon}
-                />
-                <Text style={styles.emptyTipText}>
-                  Tip: Our BiteAI can suggest recipes based on your preferences
-                </Text>
-              </View>
-            </View>
-          </Animated.View>
-        ) : (
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefreshing}
-                onRefresh={handleRefresh}
-                colors={["#FE7F2D"]}
-                tintColor="#FE7F2D"
-              />
-            }
-          >
-            {recipes.map((r: Recipe) => {
-              const isExpanded = expandedId === r.id;
-              const costNum =
-                typeof r.cost === "number"
-                  ? r.cost
-                  : parseFloat(r.cost as any) || 0;
-
-              return (
-                <View
-                  key={r.id}
-                  style={[
-                    styles.foodItemContainer,
-                    isExpanded && styles.foodItemExpanded,
-                    selectedRecipes.includes(r.id) && styles.selectedItem,
-                  ]}
-                >
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={() => {
-                      if (selectedRecipes.length > 0) {
-                        setSelectedRecipes((prev) =>
-                          prev.includes(r.id)
-                            ? prev.filter((id) => id !== r.id)
-                            : [...prev, r.id]
-                        );
-                      } else {
-                        setExpandedId(isExpanded ? null : r.id);
-                      }
-                    }}
-                    onLongPress={() => handleLongPress(r.id)}
-                    style={styles.foodItemTouchable}
-                  >
-                    {selectedRecipes.includes(r.id) && (
-                      <View style={styles.selectionIndicator}>
-                        <Icon name="check" size={20} color="white" />
-                      </View>
-                    )}
-
-                    <View style={styles.recipeContent}>
-                      <Text
-                        style={[styles.recipeTitle, styles.customFont]}
-                        numberOfLines={isExpanded ? 0 : 1}
-                        ellipsizeMode="tail"
-                      >
-                        {r.title}
-                      </Text>
-                      <Text style={styles.recipeMeta}>
-                        Saved {new Date(r.saved_at).toLocaleDateString()}
-                        {r.cost != null && <> • ₱{costNum.toFixed(2)}</>}
-                      </Text>
-                      {!isExpanded && (
-                        <Text
-                          style={styles.recipeSnippet}
-                          numberOfLines={1}
-                          ellipsizeMode="tail"
-                        >
-                          {r.ingredients.split("\n")[0]}…
-                        </Text>
-                      )}
-                    </View>
-
-                    {isExpanded && (
-                      <View style={styles.expandedDetails}>
-                        <Text style={styles.sectionHeader}>Ingredients:</Text>
-                        <Text style={styles.detailsText}>{r.ingredients}</Text>
-                        <Text style={styles.sectionHeader}>Instructions:</Text>
-                        <Text style={styles.detailsText}>{r.instructions}</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.menuButton}
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      toggleMenu(r.id);
-                    }}
-                  >
-                    <Icon name="more-vert" size={24} color="#555" />
-                  </TouchableOpacity>
-
-                  {menuVisibleId === r.id && (
-                    <View style={styles.menuDropdown}>
-                      <TouchableOpacity
-                        style={styles.menuItem}
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          setEditedTitle(r.title);
-                          setEditedIngredients(r.ingredients);
-                          setEditedInstructions(r.instructions);
-                          setEditedCost(r.cost?.toString() || "");
-                          setEditingRecipe(r);
-                          setMenuVisibleId(null);
-                        }}
-                      >
-                        <Icon
-                          name="edit"
-                          size={18}
-                          color="#3498DB"
-                          style={styles.menuIcon}
-                        />
-                        <Text style={styles.menuText}>Edit</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.menuItem}
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          deleteRecipe(r.id);
-                        }}
-                      >
-                        <Icon
-                          name="delete"
-                          size={18}
-                          color="#E74C3C"
-                          style={styles.menuIcon}
-                        />
-                        <Text style={styles.menuText}>Delete</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                </View>
-              );
-            })}
-          </ScrollView>
-        )}
-      </View>
-
-      <Modal
-        visible={!!editingRecipe}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={() => setEditingRecipe(null)}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.modalKeyboardAvoidingView}
+        <View
+          style={[
+            styles.foodContainer,
+            { paddingTop: recipes.length > 0 ? 10 : 0 },
+          ]}
         >
-          <TouchableWithoutFeedback onPress={() => setEditingRecipe(null)}>
-            <BlurView style={styles.blurView} intensity={20} tint="dark">
-              <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
-                <Animated.View
-                  style={[
-                    styles.animatedModalView,
-                    {
-                      transform: [
-                        { scale: modalScaleAnim },
-                        { translateY: modalSlideAnim },
-                      ],
-                      opacity: modalOpacityAnim,
-                    },
-                  ]}
-                >
-                  <View style={styles.modalContent}>
-                    <Text style={styles.modalTitle}>Edit Recipe</Text>
+          {recipes.length > 0 && (
+            <View style={styles.recentFoodsTitle}>
+              <Icon name="restaurant-menu" size={24} color="#FE7F2D" />
+              <Text style={[styles.recentFoodsText, styles.customFont]}>
+                Your Saved Recipes
+              </Text>
+            </View>
+          )}
 
-                    <Text style={styles.inputLabel}>Recipe Title</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      value={editedTitle}
-                      onChangeText={setEditedTitle}
-                      placeholder="Enter recipe title..."
-                      placeholderTextColor="#7F8C8D"
-                    />
-
-                    <Text style={styles.inputLabel}>Ingredients</Text>
-                    <TextInput
-                      style={[styles.textInput, styles.messageInput]}
-                      multiline
-                      value={editedIngredients}
-                      onChangeText={setEditedIngredients}
-                      placeholder="Enter ingredients (one per line)..."
-                      placeholderTextColor="#7F8C8D"
-                    />
-
-                    <Text style={styles.inputLabel}>Instructions</Text>
-                    <TextInput
-                      style={[styles.textInput, styles.messageInput]}
-                      multiline
-                      value={editedInstructions}
-                      onChangeText={setEditedInstructions}
-                      placeholder="Enter instructions..."
-                      placeholderTextColor="#7F8C8D"
-                    />
-
-                    <Text style={styles.inputLabel}>Cost (optional)</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      value={editedCost}
-                      onChangeText={setEditedCost}
-                      placeholder="Enter estimated cost..."
-                      placeholderTextColor="#7F8C8D"
-                      keyboardType="numeric"
-                    />
-
-                    <View style={styles.modalButtonContainer}>
-                      <Pressable
-                        style={[styles.modalButton, styles.modalButtonClose]}
-                        onPress={() => setEditingRecipe(null)}
-                      >
-                        <Text style={styles.modalButtonText}>Cancel</Text>
-                      </Pressable>
-                      <Pressable
-                        style={[styles.modalButton, styles.modalButtonSubmit]}
-                        onPress={updateRecipe}
-                      >
-                        <Text style={styles.modalButtonText}>Save Changes</Text>
-                      </Pressable>
-                    </View>
-                  </View>
-                </Animated.View>
-              </TouchableWithoutFeedback>
-            </BlurView>
-          </TouchableWithoutFeedback>
-        </KeyboardAvoidingView>
-      </Modal>
-
-      {showUndo && (
-        <View style={styles.undoToastContainer}>
-          {undoQueue.map((item, index) => (
-            <View
-              key={item.id}
+          {loading ? (
+            <ActivityIndicator
+              size="large"
+              color="#FE7F2D"
+              style={{ marginTop: 20 }}
+            />
+          ) : error ? (
+            <Text style={styles.errorText}>{error}</Text>
+          ) : recipes.length === 0 ? (
+            <Animated.View
               style={[
-                styles.undoToast,
+                styles.emptyContainer,
                 {
-                  bottom: 20 + index * 70, // Stack toasts vertically
-                  zIndex: 1000 - index, // Ensure newer toasts stay on top
+                  opacity: fadeAnim,
+                  transform: [{ scale: scaleAnim }, { translateY: slideUpAnim }],
                 },
               ]}
             >
-              <Text style={styles.undoText}>
-                {item.ids.length} recipe{item.ids.length > 1 ? "s" : ""} deleted
-              </Text>
-              <TouchableOpacity onPress={() => handleUndo(item.id)}>
-                <Text style={styles.undoButton}>UNDO</Text>
+              <LinearGradient
+                colors={["#FFF", "#F9F9F9"]}
+                style={styles.emptyCard}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <View style={styles.emptyIconContainer}>
+                  <Icon
+                    name="menu-book"
+                    size={60}
+                    color="#FE7F2D"
+                    style={styles.emptyIcon}
+                  />
+                </View>
+                <Text style={styles.emptyTitle}>Your Cookbook is Empty</Text>
+                <Text style={styles.emptySubtitle}>
+                  Save your favorite recipes to build your personal cookbook
+                </Text>
+                <TouchableOpacity
+                  style={styles.emptyButton}
+                  onPress={() => router.push("/chat")}
+                  activeOpacity={0.8}
+                >
+                  <LinearGradient
+                    colors={["#FE7F2D", "#FF9F4D"]}
+                    style={styles.gradientButton}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                  >
+                    <View style={styles.buttonContent}>
+                      <Icon
+                        name="search"
+                        size={16}
+                        color="white"
+                        style={styles.buttonIcon}
+                      />
+                      <Text style={styles.emptyButtonText}>Discover Recipes</Text>
+                    </View>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </LinearGradient>
+              <View style={styles.emptyTipContainer}>
+                <View style={styles.tipContent}>
+                  <Icon
+                    name="lightbulb"
+                    size={14}
+                    color="#FE7F2D"
+                    style={styles.tipIcon}
+                  />
+                  <Text style={styles.emptyTipText}>
+                    Tip: Our BiteAI can suggest recipes based on your preferences
+                  </Text>
+                </View>
+              </View>
+            </Animated.View>
+          ) : (
+            <ScrollView
+              contentContainerStyle={styles.scrollContent}
+              refreshControl={
+                <RefreshControl
+                  refreshing={isRefreshing}
+                  onRefresh={handleRefresh}
+                  colors={["#FE7F2D"]}
+                  tintColor="#FE7F2D"
+                />
+              }
+            >
+              {recipes.map((r: Recipe) => {
+                const isExpanded = expandedId === r.id;
+                const costNum =
+                  typeof r.cost === "number"
+                    ? r.cost
+                    : parseFloat(r.cost as any) || 0;
+
+                return (
+                  <View
+                    key={r.id}
+                    style={[
+                      styles.foodItemContainer,
+                      isExpanded && styles.foodItemExpanded,
+                      selectedRecipes.includes(r.id) && styles.selectedItem,
+                    ]}
+                  >
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => {
+                          // Close any open menu first
+                          setMenuVisibleId(null);
+                          
+                          // Then handle the normal click behavior
+                          if (selectedRecipes.length > 0) {
+                            setSelectedRecipes((prev) =>
+                              prev.includes(r.id)
+                                ? prev.filter((id) => id !== r.id)
+                                : [...prev, r.id]
+                            );
+                          } else {
+                            setExpandedId(isExpanded ? null : r.id);
+                          }
+                        }}
+                        onLongPress={() => handleLongPress(r.id)}
+                        delayLongPress={180}
+                        style={styles.foodItemTouchable}
+                      >
+                      {selectedRecipes.includes(r.id) && (
+                        <View style={styles.selectionIndicator}>
+                          <Icon name="check" size={20} color="white" />
+                        </View>
+                      )}
+
+                      <View style={styles.recipeContent}>
+                        <Text
+                          style={[styles.recipeTitle, styles.customFont]}
+                          numberOfLines={isExpanded ? 0 : 1}
+                          ellipsizeMode="tail"
+                        >
+                          {r.title}
+                        </Text>
+                        <Text style={styles.recipeMeta}>
+                          Saved {new Date(r.saved_at).toLocaleDateString()}
+                          {r.cost != null && <> • ₱{costNum.toFixed(2)}</>}
+                        </Text>
+                        {!isExpanded && (
+                          <Text
+                            style={styles.recipeSnippet}
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                          >
+                            {r.ingredients.split("\n")[0]}…
+                          </Text>
+                        )}
+                      </View>
+
+                      {isExpanded && (
+                        <View style={styles.expandedDetails}>
+                          <Text style={styles.sectionHeader}>Ingredients:</Text>
+                          <Text style={styles.detailsText}>{r.ingredients}</Text>
+                          <Text style={styles.sectionHeader}>Instructions:</Text>
+                          <Text style={styles.detailsText}>{r.instructions}</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.menuButton}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        toggleMenu(r.id);
+                      }}
+                    >
+                      <Icon name="more-vert" size={24} color="#555" />
+                    </TouchableOpacity>
+
+                    {menuVisibleId === r.id && (
+                      <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+                        <View style={styles.menuDropdown}>
+                          <TouchableOpacity
+                            style={styles.menuItem}
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              setEditedTitle(r.title);
+                              setEditedIngredients(r.ingredients);
+                              setEditedInstructions(r.instructions);
+                              setEditedCost(r.cost?.toString() || "");
+                              setEditingRecipe(r);
+                              setMenuVisibleId(null);
+                            }}
+                          >
+                            <Icon
+                              name="edit"
+                              size={18}
+                              color="#3498DB"
+                              style={styles.menuIcon}
+                            />
+                            <Text style={styles.menuText}>Edit</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.menuItem}
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              deleteRecipe(r.id);
+                            }}
+                          >
+                            <Icon
+                              name="delete"
+                              size={18}
+                              color="#E74C3C"
+                              style={styles.menuIcon}
+                            />
+                            <Text style={styles.menuText}>Delete</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </TouchableWithoutFeedback>
+                    )}
+                  </View>
+                );
+              })}
+            </ScrollView>
+          )}
+        </View>
+
+        <Modal
+          visible={!!editingRecipe}
+          animationType="fade"
+          transparent={true}
+          onRequestClose={() => setEditingRecipe(null)}
+        >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={styles.modalKeyboardAvoidingView}
+          >
+            <TouchableWithoutFeedback onPress={() => setEditingRecipe(null)}>
+              <BlurView style={styles.blurView} intensity={20} tint="dark">
+                <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+                  <Animated.View
+                    style={[
+                      styles.animatedModalView,
+                      {
+                        transform: [
+                          { scale: modalScaleAnim },
+                          { translateY: modalSlideAnim },
+                        ],
+                        opacity: modalOpacityAnim,
+                      },
+                    ]}
+                  >
+                    <View style={styles.modalContent}>
+                      <Text style={styles.modalTitle}>Edit Recipe</Text>
+
+                      <Text style={styles.inputLabel}>Recipe Title</Text>
+                      <TextInput
+                        style={styles.textInput}
+                        value={editedTitle}
+                        onChangeText={setEditedTitle}
+                        placeholder="Enter recipe title..."
+                        placeholderTextColor="#7F8C8D"
+                      />
+
+                      <Text style={styles.inputLabel}>Ingredients</Text>
+                      <TextInput
+                        style={[styles.textInput, styles.messageInput]}
+                        multiline
+                        value={editedIngredients}
+                        onChangeText={setEditedIngredients}
+                        placeholder="Enter ingredients (one per line)..."
+                        placeholderTextColor="#7F8C8D"
+                      />
+
+                      <Text style={styles.inputLabel}>Instructions</Text>
+                      <TextInput
+                        style={[styles.textInput, styles.messageInput]}
+                        multiline
+                        value={editedInstructions}
+                        onChangeText={setEditedInstructions}
+                        placeholder="Enter instructions..."
+                        placeholderTextColor="#7F8C8D"
+                      />
+
+                      <Text style={styles.inputLabel}>Cost (optional)</Text>
+                      <TextInput
+                        style={styles.textInput}
+                        value={editedCost}
+                        onChangeText={setEditedCost}
+                        placeholder="Enter estimated cost..."
+                        placeholderTextColor="#7F8C8D"
+                        keyboardType="numeric"
+                      />
+
+                      <View style={styles.modalButtonContainer}>
+                        <Pressable
+                          style={[styles.modalButton, styles.modalButtonClose]}
+                          onPress={() => setEditingRecipe(null)}
+                        >
+                          <Text style={styles.modalButtonText}>Cancel</Text>
+                        </Pressable>
+                        <Pressable
+                          style={[styles.modalButton, styles.modalButtonSubmit]}
+                          onPress={updateRecipe}
+                        >
+                          <Text style={styles.modalButtonText}>Save Changes</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  </Animated.View>
+                </TouchableWithoutFeedback>
+              </BlurView>
+            </TouchableWithoutFeedback>
+          </KeyboardAvoidingView>
+        </Modal>
+
+        {showUndo && (
+          <View style={styles.undoToastContainer}>
+            {undoQueue.map((item, index) => (
+              <View
+                key={item.id}
+                style={[
+                  styles.undoToast,
+                  {
+                    bottom: 20 + index * 70, // Stack toasts vertically
+                    zIndex: 1000 - index, // Ensure newer toasts stay on top
+                  },
+                ]}
+              >
+                <Text style={styles.undoText}>
+                  {item.ids.length} recipe{item.ids.length > 1 ? "s" : ""} deleted
+                </Text>
+                <TouchableOpacity onPress={() => handleUndo(item.id)}>
+                  <Text style={styles.undoButton}>UNDO</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {selectedRecipes.length > 0 && (
+          <View style={styles.floatingActionContainer}>
+            <View style={styles.floatingActions}>
+              <TouchableOpacity
+                style={[styles.floatingActionButton, styles.floatingDelete]}
+                onPress={deleteSelectedRecipes}
+              >
+                <Text style={styles.floatingButtonText}>
+                  Delete ({selectedRecipes.length})
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.floatingActionButton, styles.floatingClose]}
+                onPress={() => setSelectedRecipes([])}
+              >
+                <Icon name="close" size={18} color="white" />
               </TouchableOpacity>
             </View>
-          ))}
-        </View>
-      )}
-
-      {selectedRecipes.length > 0 && (
-        <View style={styles.floatingActionContainer}>
-          <View style={styles.floatingActions}>
-            <TouchableOpacity
-              style={[styles.floatingActionButton, styles.floatingDelete]}
-              onPress={deleteSelectedRecipes}
-            >
-              <Text style={styles.floatingButtonText}>
-                Delete ({selectedRecipes.length})
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.floatingActionButton, styles.floatingClose]}
-              onPress={() => setSelectedRecipes([])}
-            >
-              <Icon name="close" size={18} color="white" />
-            </TouchableOpacity>
           </View>
-        </View>
-      )}
+        )}
 
-      {!keyboardVisible && (
-        <View style={styles.navContainer}>
-          <View style={styles.navigation}>
-            <TouchableOpacity
-              style={styles.navItem}
-              onPress={() => router.push("/home")}
-            >
-              <View style={styles.glowContainer}>
-                <FontAwesomeIcon
-                  name="home"
+        {!keyboardVisible && (
+          <View style={styles.navContainer}>
+            <View style={styles.navigation}>
+              <TouchableOpacity
+                style={styles.navItem}
+                onPress={() => router.push("/home")}
+              >
+                <View style={styles.glowContainer}>
+                  <FontAwesomeIcon
+                    name="home"
+                    size={24}
+                    color="#FE7F2D"
+                    style={styles.glowIcon}
+                  />
+                </View>
+                <Text style={[styles.navText, styles.customFont]}>Home</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.navItem}
+                onPress={() => router.push("/chat")}
+              >
+                <FontAwesome6Icon name="brain" size={24} color="#FE7F2D" />
+                <Text style={[styles.navText, styles.customFont]}>Chat</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.navItem}
+                onPress={() => router.push("/budget")}
+              >
+                <FontAwesome6Icon name="money-bills" size={24} color="#FE7F2D" />
+                <Text style={[styles.navText, styles.customFont]}>Budget</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.navItem}
+                onPress={() => router.push("/profile")}
+              >
+                <MaterialCommunityIcons
+                  name="account-settings"
                   size={24}
                   color="#FE7F2D"
-                  style={styles.glowIcon}
                 />
-              </View>
-              <Text style={[styles.navText, styles.customFont]}>Home</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.navItem}
-              onPress={() => router.push("/chat")}
-            >
-              <FontAwesome6Icon name="brain" size={24} color="#FE7F2D" />
-              <Text style={[styles.navText, styles.customFont]}>Chat</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.navItem}
-              onPress={() => router.push("/budget")}
-            >
-              <FontAwesome6Icon name="money-bills" size={24} color="#FE7F2D" />
-              <Text style={[styles.navText, styles.customFont]}>Budget</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.navItem}
-              onPress={() => router.push("/profile")}
-            >
-              <MaterialCommunityIcons
-                name="account-settings"
-                size={24}
-                color="#FE7F2D"
-              />
-              <Text style={[styles.navText, styles.customFont]}>Profile</Text>
-            </TouchableOpacity>
+                <Text style={[styles.navText, styles.customFont]}>Profile</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      )}
-    </View>
+        )}
+      </View>
+    </TouchableWithoutFeedback>
   );
 };
 
@@ -803,12 +820,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   recipeTitle: {
-    fontSize: 16,
+    fontSize: 17,
+    fontWeight: "900",
     marginBottom: 4,
     color: "#2E2E2E",
   },
   recipeMeta: {
     fontSize: 12,
+    fontWeight: "600",
     color: "#555",
     marginBottom: 8,
   },

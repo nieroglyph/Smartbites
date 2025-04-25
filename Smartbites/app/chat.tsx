@@ -175,6 +175,13 @@ const ChatScreen = () => {
     "IstokWeb-Regular": require("../assets/fonts/IstokWeb-Regular.ttf"),
   });
 
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollToEnd({ animated: true });
+    }
+  }, [messages]);
+
   useEffect(() => {
     const loadChatHistory = async () => {
       try {
@@ -435,7 +442,7 @@ const ChatScreen = () => {
           return false;
         }
         const response = await fetch(
-          "http://192.168.100.10:8000/api/query-ollama/",
+          "http://192.168.1.9:8000/api/query-ollama/",
           {
             method: "POST",
             headers: {
@@ -502,7 +509,7 @@ const ChatScreen = () => {
       const token = await AsyncStorage.getItem("authToken");
       if (!token) throw new Error("Not authenticated");
   
-      const response = await fetch("http://192.168.100.10:8000/api/save-recipe/", {
+      const response = await fetch("http://192.168.1.9:8000/api/save-recipe/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -640,7 +647,6 @@ const ChatScreen = () => {
     return recipes;
   }
 
-  // Inside handleSaveRecipe function
   const handleSaveRecipe = async (recipeMsg: Message) => {
     const recipes = parseRecipes(recipeMsg.text);
     
@@ -944,9 +950,12 @@ const ChatScreen = () => {
             ref={scrollViewRef}
             style={styles.chatContent}
             contentContainerStyle={styles.chatContentContainer}
-            onContentSizeChange={() =>
-              scrollViewRef.current?.scrollToEnd({ animated: true })
-            }
+            onContentSizeChange={() => {
+              scrollViewRef.current?.scrollToEnd({ animated: true });
+            }}
+            onLayout={() => {
+              scrollViewRef.current?.scrollToEnd({ animated: true });
+            }}
           >
             {messages.map((msg) => (
               <View
