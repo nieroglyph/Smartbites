@@ -1,4 +1,4 @@
-import { ToastConfig } from 'react-native-toast-message';
+import { BaseToastProps } from 'react-native-toast-message';
 import { View, Text, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
   }
 });
 
-export const toastConfig: ToastConfig<MyToastTypes> = {
+export const toastConfig: Record<keyof MyToastTypes, (props: BaseToastProps & MyToastTypes[keyof MyToastTypes]) => JSX.Element> = {
   success: ({ text1, text2 }: MyToastTypes['success']) => (
     <View style={[styles.baseToast, styles.successToast]}>
       <Icon name="check-circle" size={20} color="#4BB543" />
