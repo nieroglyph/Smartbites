@@ -19,10 +19,12 @@ import FontAwesome6Icon from "react-native-vector-icons/FontAwesome6";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useFonts } from "expo-font";
 import { useRouter } from "expo-router";
+import { useIsFocused } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import { CameraView, useCameraPermissions, CameraType } from "expo-camera";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Toast from "react-native-toast-message";
+import { globalResponseState, cleanupResponseState } from "./hooks/responseState";
 
 interface Message {
   id: number;
@@ -143,6 +145,7 @@ const ThinkingDots = () => {
 
 const ChatScreen = () => {
   const router = useRouter();
+  const isFocused = useIsFocused();
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -164,7 +167,6 @@ const ChatScreen = () => {
   const [inputHeight, setInputHeight] = useState(16);
   const [isAIResponding, setIsAIResponding] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
-  const responseInterval = useRef<NodeJS.Timeout | null>(null);
 
   const [cameraPermission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
@@ -174,6 +176,56 @@ const ChatScreen = () => {
   const [fontsLoaded] = useFonts({
     "IstokWeb-Regular": require("../assets/fonts/IstokWeb-Regular.ttf"),
   });
+
+  // Subscribe to message updates from global state
+  useEffect(() => {
+    const subscription = globalResponseState.messageUpdated.subscribe(({id, text}) => {
+      setMessages((prevMessages) =>
+        prevMessages.map((msg) =>
+          msg.id === id ? { ...msg, text } : msg
+        )
+      );
+      
+      // Update AsyncStorage for persistence
+      AsyncStorage.getItem(CHAT_STORAGE_KEY)
+        .then(savedChat => {
+          if (savedChat) {
+            const parsedMessages = JSON.parse(savedChat);
+            const updatedMessages = parsedMessages.map((msg: Message) =>
+              msg.id === id ? { ...msg, text } : msg
+            );
+            return AsyncStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(updatedMessages));
+          }
+        })
+        .catch(console.error);
+    });
+
+    // Check for response completion
+    const interval = setInterval(() => {
+      if (!globalResponseState.isResponding && isAIResponding) {
+        setIsAIResponding(false);
+      }
+    }, 500);
+
+    return () => {
+      subscription.unsubscribe();
+      clearInterval(interval);
+    };
+  }, [isAIResponding]);
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      cleanupResponseState();
+    };
+  }, []);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (scrollViewRef.current && isFocused) {
+      scrollViewRef.current.scrollToEnd({ animated: true });
+    }
+  }, [messages, isFocused]);
 
   useEffect(() => {
     const loadChatHistory = async () => {
@@ -251,10 +303,10 @@ const ChatScreen = () => {
         { 
           text: "Clear", 
           onPress: async () => {
-            if (responseInterval.current) {
-              clearInterval(responseInterval.current);
-              responseInterval.current = null;
-            }
+            // Stop any active response animation
+            globalResponseState.stopResponseAnimation();
+            globalResponseState.resetResponseState();
+            
             setIsAIResponding(false);
             const newMessages = [{
               id: 1,
@@ -269,14 +321,6 @@ const ChatScreen = () => {
       ]
     );
   };
-
-  useEffect(() => {
-    return () => {
-      if (responseInterval.current) {
-        clearInterval(responseInterval.current);
-      }
-    };
-  }, []);
 
   useEffect(() => {
     (async () => {
@@ -384,7 +428,7 @@ const ChatScreen = () => {
   };
 
   const handleSend = async () => {
-    if ((message.trim() || photoPreview) && !isAIResponding) {
+    if ((message.trim() || photoPreview) && !globalResponseState.isResponding) {
       const newUserMessage: Message = {
         id: messages.length + 1,
         text: message,
@@ -395,12 +439,12 @@ const ChatScreen = () => {
         isUser: true,
         ...(photoPreview && { image: photoPreview }),
       };
-
+  
       setMessages((prev) => [...prev, newUserMessage]);
       setMessage("");
       setPhotoPreview(null);
       setInputHeight(16);
-
+  
       const thinkingMessage: Message = {
         id: messages.length + 2,
         text: "###THINKING_ANIMATION###",
@@ -410,10 +454,14 @@ const ChatScreen = () => {
         }),
         isUser: false,
       };
-
+  
       setMessages((prev) => [...prev, thinkingMessage]);
+      
+      // Update global state
+      globalResponseState.isResponding = true;
+      globalResponseState.thinkingMessageId = thinkingMessage.id;
       setIsAIResponding(true);
-
+  
       try {
         const formData = new FormData();
         formData.append("prompt", message);
@@ -421,21 +469,24 @@ const ChatScreen = () => {
           const filename = photoPreview.split("/").pop() || "photo.jpg";
           const match = /\.(\w+)$/.exec(filename);
           const type = match ? `image/${match[1]}` : "image/jpeg";
-
+  
           formData.append("image", {
             uri: photoPreview,
             type,
             name: filename,
           } as any);
         }
-
+  
         const token = await AsyncStorage.getItem("authToken");
         if (!token) {
           Alert.alert("Error", "Not authenticated");
+          globalResponseState.isResponding = false;
+          setIsAIResponding(false);
           return false;
         }
+        
         const response = await fetch(
-          "http://192.168.100.10:8000/api/query-ollama/",
+          "http://192.168.1.9:8000/api/query-ollama/",
           {
             method: "POST",
             headers: {
@@ -445,49 +496,45 @@ const ChatScreen = () => {
             body: formData,
           }
         );
-
+  
         if (!response.ok) throw new Error("Failed to get response from AI");
-
+  
         const data = await response.json();
         const fullResponse = data.response;
-
-        let currentText = "";
-        let index = 0;
-
+  
+        // Store full response in global state
+        globalResponseState.fullResponse = fullResponse;
+        globalResponseState.currentIndex = 0;
+  
+        // Update thinking message to empty string to prepare for animation
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === thinkingMessage.id ? { ...msg, text: "" } : msg
           )
         );
-
-        responseInterval.current = setInterval(() => {
-          if (index < fullResponse.length) {
-            currentText += fullResponse[index];
-            index++;
-
-            setMessages((prevMessages) =>
-              prevMessages.map((msg) =>
-                msg.id === thinkingMessage.id
-                  ? { ...msg, text: currentText }
-                  : msg
-              )
-            );
-          } else {
-            if (responseInterval.current) {
-              clearInterval(responseInterval.current);
-              responseInterval.current = null;
-            }
+  
+        // Start global response animation
+        globalResponseState.startResponseAnimation(globalResponseState.currentIndex);
+        
+        // Add completion listener
+        const completionListener = globalResponseState.messageUpdated.subscribe(() => {
+          if (!globalResponseState.isResponding) {
             setIsAIResponding(false);
+            completionListener.unsubscribe();
           }
-        }, 30);
+        });
+        
       } catch (error) {
         console.error("Error fetching AI response:", error);
         Alert.alert("Error", "Failed to communicate with AI.");
+        
+        // Clean up global state
+        globalResponseState.isResponding = false;
+        globalResponseState.stopResponseAnimation();
         setIsAIResponding(false);
-        if (responseInterval.current) {
-          clearInterval(responseInterval.current);
-          responseInterval.current = null;
-        }
+        
+        // Remove the thinking message
+        setMessages(prev => prev.filter(msg => msg.id !== thinkingMessage.id));
       }
     }
   };
@@ -502,7 +549,7 @@ const ChatScreen = () => {
       const token = await AsyncStorage.getItem("authToken");
       if (!token) throw new Error("Not authenticated");
   
-      const response = await fetch("http://192.168.100.10:8000/api/save-recipe/", {
+      const response = await fetch("http://192.168.1.9:8000/api/save-recipe/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -535,63 +582,68 @@ const ChatScreen = () => {
       instructions: string;
       cost: number | null;
     }> = [];
-
+  
+    // First, normalize the formatting in the response text
+    const normalizedText = responseText
+      .replace(/\*\*([^*]+)\*\*/g, '$1') // Remove bold markers
+      .replace(/^\*\s+/gm, '• ');       // Convert asterisk bullets to bullet points
+  
     const recipeDelimiters = [
       /\*\*Recipe \d+\*\*/g,
       /\n##\s/g,
       /\n\n\n/g,
       /\n\*\*\d+\.\*\*\s/g,
     ];
-
+  
     let recipeSections: string[] = [];
     let delimiterUsed = null;
-
+  
     for (const delimiter of recipeDelimiters) {
-      const sections = responseText.split(delimiter).filter((s) => s.trim());
+      const sections = normalizedText.split(delimiter).filter((s) => s.trim());
       if (sections.length > 1) {
         recipeSections = sections;
         delimiterUsed = delimiter;
         break;
       }
     }
-
+  
     if (recipeSections.length <= 1) {
       const titleMatches = [
-        ...responseText.matchAll(/\*\*Title:\*\*\s*(.+?)\n/g),
+        ...normalizedText.matchAll(/Title:\s*(.+?)\n/g),
       ];
       if (titleMatches.length > 1) {
         recipeSections = [];
         let lastIndex = 0;
         titleMatches.forEach((match, index) => {
           if (index > 0) {
-            recipeSections.push(responseText.substring(lastIndex, match.index));
+            recipeSections.push(normalizedText.substring(lastIndex, match.index));
           }
           lastIndex = match.index || 0;
         });
-        recipeSections.push(responseText.substring(lastIndex));
+        recipeSections.push(normalizedText.substring(lastIndex));
       }
     }
-
+  
     if (recipeSections.length <= 1) {
-      recipeSections = [responseText];
+      recipeSections = [normalizedText];
     }
-
+  
     for (const section of recipeSections) {
       let title = "Untitled Recipe";
       let ingredients = "";
       let instructions = "";
       let cost: number | null = null;
-
+  
       const titleMatch =
-        section.match(/\*\*Title:\*\*\s*(.+)/i) ||
-        section.match(/\*\*(.+?)\*\*/i) ||
+        section.match(/Title:\s*(.+)/i) ||
+        section.match(/(.+?)\n/i) ||
         section.match(/^#\s*(.+)/i);
       if (titleMatch) {
         title = titleMatch[1].trim();
       }
-
+  
       const ingredientsMatch = section.match(
-        /\*\*Ingredients:\*\*\s*([\s\S]+?)(?:\*\*Instructions:\*\*|\*\*Total|\n\n|$)/i
+        /Ingredients:\s*([\s\S]+?)(?:Instructions:|Total|\n\n|$)/i
       );
       if (ingredientsMatch) {
         ingredients = ingredientsMatch[1].trim();
@@ -603,9 +655,9 @@ const ChatScreen = () => {
           .substring(ingredientsIndex + "Ingredients:".length, endIndex)
           .trim();
       }
-
+  
       const instructionsMatch = section.match(
-        /\*\*Instructions:\*\*\s*([\s\S]+?)(?:\*\*Total|\n\n|$)/i
+        /Instructions:\s*([\s\S]+?)(?:Total|\n\n|$)/i
       );
       if (instructionsMatch) {
         instructions = instructionsMatch[1].trim();
@@ -615,14 +667,14 @@ const ChatScreen = () => {
           .substring(instructionsIndex + "Instructions:".length)
           .trim();
       }
-
+  
       const costMatch = section.match(
-        /\*\*Total Estimated Price:\*\*\s*₱([\d,\.]+)/i
+        /Total Estimated Price:\s*₱([\d,\.]+)/i
       );
       if (costMatch) {
         cost = parseFloat(costMatch[1].replace(/,/g, ""));
       }
-
+  
       if (
         (ingredients || instructions) &&
         !section.includes("Here are") &&
@@ -636,11 +688,10 @@ const ChatScreen = () => {
         });
       }
     }
-
+  
     return recipes;
   }
-
-  // Inside handleSaveRecipe function
+  
   const handleSaveRecipe = async (recipeMsg: Message) => {
     const recipes = parseRecipes(recipeMsg.text);
     
@@ -944,9 +995,12 @@ const ChatScreen = () => {
             ref={scrollViewRef}
             style={styles.chatContent}
             contentContainerStyle={styles.chatContentContainer}
-            onContentSizeChange={() =>
-              scrollViewRef.current?.scrollToEnd({ animated: true })
-            }
+            onContentSizeChange={() => {
+              scrollViewRef.current?.scrollToEnd({ animated: true });
+            }}
+            onLayout={() => {
+              scrollViewRef.current?.scrollToEnd({ animated: true });
+            }}
           >
             {messages.map((msg) => (
               <View
@@ -993,7 +1047,7 @@ const ChatScreen = () => {
                     </Text>
                   )}
   
-                  {!msg.isUser &&
+                    {!msg.isUser &&
                     !isAIResponding &&
                     msg.text &&
                     msg.text.toLowerCase().includes("ingredients") &&
@@ -1017,7 +1071,7 @@ const ChatScreen = () => {
                         </View>
                         <Text style={styles.recipeTimeStamp}>{msg.time}</Text>
                       </View>
-                    )}
+                  )}
                 </View>
               </View>
             ))}

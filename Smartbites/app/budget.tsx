@@ -275,7 +275,7 @@ const BudgetScreen = () => {
                 <ScrollView 
                   style={[
                     styles.expensesScroll,
-                    expenses.length > 2 && { maxHeight: 92 }
+                    expenses.length > 2 && { maxHeight: 150 },
                   ]}
                   nestedScrollEnabled={true}
                 >
