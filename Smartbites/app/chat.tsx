@@ -177,7 +177,6 @@ const ChatScreen = () => {
     "IstokWeb-Regular": require("../assets/fonts/IstokWeb-Regular.ttf"),
   });
 
-  // Subscribe to message updates from global state
   useEffect(() => {
     const subscription = globalResponseState.messageUpdated.subscribe(({id, text}) => {
       setMessages((prevMessages) =>
@@ -186,7 +185,6 @@ const ChatScreen = () => {
         )
       );
       
-      // Update AsyncStorage for persistence
       AsyncStorage.getItem(CHAT_STORAGE_KEY)
         .then(savedChat => {
           if (savedChat) {
@@ -200,7 +198,6 @@ const ChatScreen = () => {
         .catch(console.error);
     });
 
-    // Check for response completion
     const interval = setInterval(() => {
       if (!globalResponseState.isResponding && isAIResponding) {
         setIsAIResponding(false);
@@ -213,14 +210,12 @@ const ChatScreen = () => {
     };
   }, [isAIResponding]);
 
-  // Clean up on unmount
   useEffect(() => {
     return () => {
       cleanupResponseState();
     };
   }, []);
 
-  // Auto-scroll to bottom when messages change
   useEffect(() => {
     if (scrollViewRef.current && isFocused) {
       scrollViewRef.current.scrollToEnd({ animated: true });
@@ -235,7 +230,6 @@ const ChatScreen = () => {
           const parsedMessages = JSON.parse(savedChat);
           setMessages(parsedMessages);
         } else {
-          // Set initial message only if no history exists
           setMessages([
             {
               id: 1,
@@ -256,7 +250,6 @@ const ChatScreen = () => {
     loadChatHistory();
   }, []);
 
-  // Save chat history whenever messages change
   useEffect(() => {
     const saveChatHistory = async () => {
       try {
@@ -303,7 +296,6 @@ const ChatScreen = () => {
         { 
           text: "Clear", 
           onPress: async () => {
-            // Stop any active response animation
             globalResponseState.stopResponseAnimation();
             globalResponseState.resetResponseState();
             
@@ -457,7 +449,6 @@ const ChatScreen = () => {
   
       setMessages((prev) => [...prev, thinkingMessage]);
       
-      // Update global state
       globalResponseState.isResponding = true;
       globalResponseState.thinkingMessageId = thinkingMessage.id;
       setIsAIResponding(true);
@@ -502,21 +493,17 @@ const ChatScreen = () => {
         const data = await response.json();
         const fullResponse = data.response;
   
-        // Store full response in global state
         globalResponseState.fullResponse = fullResponse;
         globalResponseState.currentIndex = 0;
   
-        // Update thinking message to empty string to prepare for animation
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === thinkingMessage.id ? { ...msg, text: "" } : msg
           )
         );
   
-        // Start global response animation
         globalResponseState.startResponseAnimation(globalResponseState.currentIndex);
         
-        // Add completion listener
         const completionListener = globalResponseState.messageUpdated.subscribe(() => {
           if (!globalResponseState.isResponding) {
             setIsAIResponding(false);
@@ -528,12 +515,10 @@ const ChatScreen = () => {
         console.error("Error fetching AI response:", error);
         Alert.alert("Error", "Failed to communicate with AI.");
         
-        // Clean up global state
         globalResponseState.isResponding = false;
         globalResponseState.stopResponseAnimation();
         setIsAIResponding(false);
         
-        // Remove the thinking message
         setMessages(prev => prev.filter(msg => msg.id !== thinkingMessage.id));
       }
     }
@@ -583,10 +568,9 @@ const ChatScreen = () => {
       cost: number | null;
     }> = [];
   
-    // First, normalize the formatting in the response text
     const normalizedText = responseText
-      .replace(/\*\*([^*]+)\*\*/g, '$1') // Remove bold markers
-      .replace(/^\*\s+/gm, '• ');       // Convert asterisk bullets to bullet points
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/^\*\s+/gm, '• ');
   
     const recipeDelimiters = [
       /\*\*Recipe \d+\*\*/g,
@@ -706,7 +690,6 @@ const ChatScreen = () => {
     const errorMessages: string[] = [];
   
     try {
-      // For single recipe
       if (recipes.length === 1) {
         const { title, ingredients, instructions, cost } = recipes[0];
         try {

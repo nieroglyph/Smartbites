@@ -1,4 +1,3 @@
-// responseState.ts
 import { Subject } from 'rxjs';
 
 type MessageUpdate = { id: number; text: string };
@@ -45,7 +44,6 @@ class ResponseState {
 
   set isResponding(value: boolean) {
     this._isResponding = value;
-    // Notify subscribers when responding state changes
     if (!value) {
       this.messageUpdated.next({
         id: this._thinkingMessageId!,
@@ -72,7 +70,6 @@ class ResponseState {
         });
       } else {
         this.stopResponseAnimation();
-        // Ensure we send the complete message when done
         this.messageUpdated.next({
           id: this._thinkingMessageId!,
           text: this._fullResponse
@@ -104,7 +101,6 @@ class ResponseState {
 
 export const globalResponseState = new ResponseState();
 
-// For React Native cleanup
 export const cleanupResponseState = () => {
   globalResponseState.complete();
 };
