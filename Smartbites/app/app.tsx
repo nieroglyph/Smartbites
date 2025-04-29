@@ -5,7 +5,7 @@ import SplashScreen from "./splashscreen";
 import Login from "./login";
 import SignUp from "./sign_up";
 import { createStackNavigator } from "@react-navigation/stack";
-import ForgotPassword from "./forgot_password_1";
+import ForgotPassword from "./reset-password/index";
 import Home from "./home";
 import Profile from "./profile";
 import ProfileEdit from "./profile_edit";

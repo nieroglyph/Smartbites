@@ -41,7 +41,13 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
+    'djoser',
 ]
+
+DJOSER = {
+    "PASSWORD_RESET_CONFIRM_URL": "smartbites://reset-password/{uid}/{token}",
+    'SERIALIZERS': {},
+}
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -137,10 +143,25 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-AUTH_USER_MODEL = 'api.CustomUser'  # Replace 'yourapp' with your app name
+AUTH_USER_MODEL = 'api.CustomUser' 
+
+import os
+from dotenv import load_dotenv
+
+# look for a .env file in the same directory as settings.py
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(BASE_DIR, '.env'))
+
+EMAIL_BACKEND        = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST           = 'smtp.gmail.com'
+EMAIL_PORT           = 587
+EMAIL_USE_TLS        = True
+EMAIL_HOST_USER      = os.environ['EMAIL_HOST_USER']
+EMAIL_HOST_PASSWORD  = os.environ['EMAIL_HOST_PASSWORD']
+DEFAULT_FROM_EMAIL   = EMAIL_HOST_USER
 
 # CORS_ALLOWED_ORIGINS = [
 #     "http://localhost:3000",  # Allow React frontend
 # ]
 
-ALLOWED_HOSTS = ['127.0.0.1','192.168.1.9', '192.168.170.150','http://localhost:3306', '192.168.254.111', '192.168.100.10']  # Or ['your-local-ip']
+ALLOWED_HOSTS = ['127.0.0.1','192.168.1.9', '192.168.170.150','http://localhost:3306', '192.168.254.111', '192.168.100.10'] 

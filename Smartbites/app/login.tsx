@@ -102,7 +102,7 @@ const LoginScreen: React.FC = () => {
           </View>
 
           {/* Forgot Password */}
-          <TouchableOpacity onPress={() => router.push("/forgot_password_1")}>
+          <TouchableOpacity onPress={() => router.push("/reset-password")}>
             <Text style={styles.forgotPassword}>Forgot Password?</Text>
           </TouchableOpacity>
 

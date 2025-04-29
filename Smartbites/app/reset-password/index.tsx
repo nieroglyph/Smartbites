@@ -1,42 +1,88 @@
 import React from "react";
+import { useState } from "react";
+import { Alert } from "react-native";
 import { useFonts } from "expo-font";
-import { 
-  View, Text, TextInput, TouchableOpacity, Image, StyleSheet, ActivityIndicator 
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Image,
+  StyleSheet,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import Toast from "react-native-toast-message";
 
 const ForgotPasswordScreen: React.FC = () => {
   const router = useRouter();
-
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
   const [fontsLoaded] = useFonts({
-    "IstokWeb-Bold": require("../assets/fonts/IstokWeb-Bold.ttf"),
+    "IstokWeb-Bold": require("../../assets/fonts/IstokWeb-Bold.ttf"),
   });
 
+  const handleResetRequest = async () => {
+    if (!email) {
+      Alert.alert("Please enter your email");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch(
+        "http://192.168.100.10:8000/auth/users/reset_password/",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        }
+      );
+      if (res.ok) {
+        Toast.show({
+          type: "success",
+          text1: "Check your inbox",
+          text2: "Password reset link sent.",
+        });
+      } else {
+        const err = await res.json();
+        throw new Error(err.email?.[0] || "Request failed");
+      }
+    } catch (e: any) {
+      Toast.show({ type: "error", text1: "Error", text2: e.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!fontsLoaded) {
-    return <ActivityIndicator size="large" color="#FF7F32" style={styles.loader} />;
+    return (
+      <ActivityIndicator size="large" color="#FF7F32" style={styles.loader} />
+    );
   }
 
   return (
     <View style={styles.container}>
       {/* Custom Back Button */}
-      <TouchableOpacity 
-        style={styles.backButton}
-        onPress={() => router.back()}
-      >
-        <MaterialCommunityIcons name="keyboard-return" size={24} color="#FE7F2D" />
+      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <MaterialCommunityIcons
+          name="keyboard-return"
+          size={24}
+          color="#FE7F2D"
+        />
       </TouchableOpacity>
 
       {/* Logo */}
       <Image
-        source={require("../assets/images/logo/smartbites-high-resolution-logo-transparent.png")}
+        source={require("../../assets/images/logo/smartbites-high-resolution-logo-transparent.png")}
         style={styles.logo}
       />
 
       {/* Title and Subtitle */}
       <Text style={styles.title}>Password Reset</Text>
       <Text style={styles.subtitle}>
-        Provide the email address associated with your account to recover your password
+        Provide the email address associated with your account to recover your
+        password
       </Text>
 
       {/* Email Input */}
@@ -45,14 +91,15 @@ const ForgotPasswordScreen: React.FC = () => {
         <TextInput
           style={styles.input}
           placeholder="Email Address"
-          placeholderTextColor="#B0B0B0"
           keyboardType="email-address"
           autoCapitalize="none"
+          value={email}
+          onChangeText={setEmail}
         />
       </View>
 
       {/* Reset Button */}
-      <TouchableOpacity style={styles.resetButton}>
+      <TouchableOpacity style={styles.resetButton} onPress={handleResetRequest}>
         <Text style={styles.resetButtonText}>Reset password</Text>
       </TouchableOpacity>
 
