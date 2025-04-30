@@ -215,7 +215,7 @@ def query_ollama(request):
             if profile.allergies:
                 profile_info_parts.append(f"Allergies: {profile.allergies}")
             if profile.budget is not None:
-                profile_info_parts.append(f"Budget: ₱{profile.budget}")
+                profile_info_parts.append(f"Monthly Budget: ₱{profile.budget}")
         profile_info = ". ".join(profile_info_parts)
 
         full_prompt = f"{profile_info}. {user_prompt}" if profile_info else user_prompt

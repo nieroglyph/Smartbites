@@ -205,7 +205,7 @@ const HomeScreen = () => {
 
     try {
       const res = await fetch(
-        `http://192.168.1.9:8000/api/update-recipe/${editingRecipe.id}/`,
+        `http://192.168.166.150:8000/api/update-recipe/${editingRecipe.id}/`,
         {
           method: "PUT",
           headers: {
@@ -258,7 +258,7 @@ const HomeScreen = () => {
 
         if (ids.length === 1) {
           await fetch(
-            `http://192.168.1.9:8000/api/delete-recipe/${ids[0]}/`,
+            `http://192.168.166.150:8000/api/delete-recipe/${ids[0]}/`,
             {
               method: "DELETE",
               headers: { Authorization: `Token ${token}` },
@@ -266,7 +266,7 @@ const HomeScreen = () => {
           );
         } else {
           await fetch(
-            "http://192.168.1.9:8000/api/delete-multiple-recipes/",
+            "http://192.168.166.150:8000/api/delete-multiple-recipes/",
             {
               method: "POST",
               headers: {

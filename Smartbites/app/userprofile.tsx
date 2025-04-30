@@ -60,6 +60,7 @@ const UserprofileScreen = () => {
   const [showAllowanceOptions, setShowAllowanceOptions] = useState(false);
   const [showDietOptions, setShowDietOptions] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [tempSelectedAllergies, setTempSelectedAllergies] = useState<string[]>([]);
 
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -117,14 +118,16 @@ const UserprofileScreen = () => {
       );
     }
     if (profile?.allergies) {
-      setSelectedAllergies(profile.allergies.split(", "));
+      const allergies = profile.allergies.split(", ");
+      setSelectedAllergies(allergies);
+      setTempSelectedAllergies(allergies);
     }
     if (profile?.budget !== undefined && profile?.budget !== null) {
       setAllowanceAmount(profile.budget.toString());
     }
   }, [profile]);
 
-  // Handle taps outside dropdowns
+
   useEffect(() => {
     const handleTapOutside = () => {
       if (showAllowanceOptions) {
@@ -171,7 +174,7 @@ const UserprofileScreen = () => {
       }
 
       const response = await fetch(
-        "http://192.168.1.9:8000/api/update-user-profile/",
+        "http://192.168.166.150:8000/api/update-user-profile/",
         {
           method: "PATCH",
           headers: {
@@ -237,20 +240,16 @@ const UserprofileScreen = () => {
   const dietOptions = ["Vegan", "Keto", "Vegetarian", "Omnivore"];
 
   const removeAllergy = async (allergyToRemove: string) => {
-    // Filter out the removed allergy from local state
     const updatedAllergies = selectedAllergies.filter(
       (a) => a !== allergyToRemove
     );
 
-    // Update local state optimistically
     setSelectedAllergies(updatedAllergies);
 
-    // Send patch request
     const success = await updateProfile({
       allergies: updatedAllergies.join(", "),
     });
 
-    // If it fails, revert
     if (!success) {
       setSelectedAllergies([...selectedAllergies]);
       showAlert("Failed to remove allergy.");
@@ -258,9 +257,9 @@ const UserprofileScreen = () => {
   };
 
   const handleAddAllergy = () => {
-    if (newAllergy && !selectedAllergies.includes(newAllergy)) {
-      setSelectedAllergies([...selectedAllergies, newAllergy]);
-      setNewAllergy("");
+    if (newAllergy && !tempSelectedAllergies.includes(newAllergy)) {
+      setTempSelectedAllergies([...tempSelectedAllergies, newAllergy]);
+      setNewAllergy('');
     }
   };
 
@@ -300,9 +299,10 @@ const UserprofileScreen = () => {
 
   const handleSaveAllergies = async () => {
     const success = await updateProfile({
-      allergies: selectedAllergies.join(", "),
+      allergies: tempSelectedAllergies.join(", "),
     });
     if (success) {
+      setSelectedAllergies(tempSelectedAllergies);
       Toast.show({
         type: "success",
         text1: "Allergies Saved",
@@ -517,7 +517,8 @@ const UserprofileScreen = () => {
                 style={styles.settingItem}
                 onPress={() => {
                   setShowAllergiesModal(true);
-                  setSearchQuery("");
+                  setTempSelectedAllergies([...selectedAllergies]);
+                  setSearchQuery('');
                 }}
                 activeOpacity={0.7}
               >
@@ -561,7 +562,9 @@ const UserprofileScreen = () => {
         visible={showAllergiesModal}
         animationType="none"
         transparent={true}
-        onRequestClose={() => setShowAllergiesModal(false)}
+        onRequestClose={() => {
+          setShowAllergiesModal(false);
+        }}
       >
         <TouchableWithoutFeedback onPress={() => setShowAllergiesModal(false)}>
           <BlurView style={styles.blurView} intensity={50} tint="dark">
@@ -586,54 +589,53 @@ const UserprofileScreen = () => {
                   <Text style={styles.modalSubtitle}>
                     Common Food Allergens
                   </Text>
+                  
+                  {/* Added scroll indicator text */}
+                  <Text style={styles.scrollIndicator}>Scroll for more options</Text>
 
-                  <ScrollView style={styles.allergyList}>
-                    {commonAllergies.map((allergy, index) => (
-                      <TouchableOpacity
-                        key={index}
+                  <ScrollView 
+                    style={styles.allergyList}
+                    showsVerticalScrollIndicator={true}
+                    indicatorStyle="white"
+                  >
+                  {commonAllergies.map((allergy, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.allergyItem,
+                        tempSelectedAllergies.includes(allergy) && styles.selectedAllergy,
+                        index === commonAllergies.length - 1 && styles.lastAllergyItem,
+                      ]}
+                      onPress={() => {
+                        if (tempSelectedAllergies.includes(allergy)) {
+                          setTempSelectedAllergies(
+                            tempSelectedAllergies.filter((item) => item !== allergy)
+                          );
+                        } else {
+                          setTempSelectedAllergies([...tempSelectedAllergies, allergy]);
+                        }
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text
                         style={[
-                          styles.allergyItem,
-                          selectedAllergies.includes(allergy) &&
-                            styles.selectedAllergy,
-                          index === commonAllergies.length - 1 &&
-                            styles.lastAllergyItem,
+                          styles.allergyItemText,
+                          tempSelectedAllergies.includes(allergy) && styles.selectedAllergyText,
                         ]}
-                        onPress={() => {
-                          if (selectedAllergies.includes(allergy)) {
-                            setSelectedAllergies(
-                              selectedAllergies.filter(
-                                (item) => item !== allergy
-                              )
-                            );
-                          } else {
-                            setSelectedAllergies([
-                              ...selectedAllergies,
-                              allergy,
-                            ]);
-                          }
-                        }}
-                        activeOpacity={0.7}
                       >
-                        <Text
-                          style={[
-                            styles.allergyItemText,
-                            selectedAllergies.includes(allergy) &&
-                              styles.selectedAllergyText,
-                          ]}
-                        >
-                          {allergy}
-                        </Text>
-                        {selectedAllergies.includes(allergy) && (
-                          <View style={styles.checkmarkContainer}>
-                            <Ionicons
-                              name="checkmark-circle"
-                              size={20}
-                              color="#FE7F2D"
-                            />
-                          </View>
-                        )}
-                      </TouchableOpacity>
-                    ))}
+                        {allergy}
+                      </Text>
+                      {tempSelectedAllergies.includes(allergy) && (
+                        <View style={styles.checkmarkContainer}>
+                          <Ionicons
+                            name="checkmark-circle"
+                            size={20}
+                            color="#FE7F2D"
+                          />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  ))}
                   </ScrollView>
 
                   <View style={styles.divider} />
@@ -874,7 +876,7 @@ const styles = StyleSheet.create({
   selectedAllergiesContainer: {
     paddingHorizontal: 12,
     marginTop: 8,
-    backgroundColor: "#FBFCF8",
+    backgroundColor: "transparent",
     paddingBottom: 8,
     borderBottomLeftRadius: 5,
     borderBottomRightRadius: 5,
@@ -979,42 +981,42 @@ const styles = StyleSheet.create({
     fontFamily: "IstokWeb-Regular",
   },
   allergyList: {
-    maxHeight: 220,
+    maxHeight: 235,
     paddingHorizontal: 20,
   },
   allergyItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
     marginBottom: 6,
-    backgroundColor: "rgba(255,255,255,0.9)",
+    backgroundColor: 'rgba(255,255,255,0.9)',
     borderWidth: 1,
-    borderColor: "#2D2F2F",
+    borderColor: '#2D2F2F',
   },
   lastAllergyItem: {
     marginBottom: 0,
   },
+  selectedAllergy: {
+    backgroundColor: '#003B46',
+    borderColor: '#003B46',
+  },
   allergyItemText: {
     fontSize: 16,
-    color: "#1D1F1F",
-    fontFamily: "IstokWeb-Regular",
-  },
-  selectedAllergy: {
-    backgroundColor: "#003B46",
-    borderColor: "#003B46",
+    color: '#1D1F1F',
+    fontFamily: 'IstokWeb-Regular',
   },
   selectedAllergyText: {
-    color: "rgba(255,255,255,0.9)",
-    fontWeight: "600",
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   checkmarkContainer: {
     width: 24,
     height: 24,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   divider: {
     height: 1,
@@ -1101,6 +1103,13 @@ const styles = StyleSheet.create({
     color: '#E74C3C',
     fontSize: 16,
     textAlign: 'center',
+  },
+  scrollIndicator: {
+    fontSize: 12,
+    color: '#7F8C8D',
+    textAlign: 'center',
+    marginBottom: 8,
+    fontFamily: "IstokWeb-Regular",
   },
 });
 

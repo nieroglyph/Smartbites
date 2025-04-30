@@ -36,7 +36,7 @@ const LoginScreen: React.FC = () => {
 
     setLoading(true);
     try {
-      const response = await fetch("http://192.168.1.9:8000/api/login/", {
+      const response = await fetch("http://192.168.166.150:8000/api/login/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -102,7 +102,7 @@ const LoginScreen: React.FC = () => {
           </View>
 
           {/* Forgot Password */}
-          <TouchableOpacity onPress={() => router.push("/reset-password")}>
+          <TouchableOpacity onPress={() => router.push("./reset-password/index.tsx")}>
             <Text style={styles.forgotPassword}>Forgot Password?</Text>
           </TouchableOpacity>
 

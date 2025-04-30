@@ -10,6 +10,7 @@ import {
   Platform,
   ScrollView,
   KeyboardAvoidingView,
+  Keyboard,
   Modal,
   Pressable,
   Animated,
@@ -146,6 +147,11 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
     }
   }, [showPasswordModal]);
 
+  // Function to dismiss keyboard
+  const dismissKeyboard = () => {
+    Keyboard.dismiss();
+  };
+
   // Handle loading and error states
   if (loading) {
     return (
@@ -224,6 +230,7 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
   };
 
   const handleSubmit = async () => {
+    dismissKeyboard();
     if (!validate()) return;
 
     try {
@@ -231,7 +238,7 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
       if (!token) return;
 
       const response = await fetch(
-        "http://192.168.1.9:8000/api/update-profile/",
+        "http://192.168.166.150:8000/api/update-profile/",
         {
           method: "PATCH",
           headers: {
@@ -271,6 +278,7 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
   };
 
   const pickImage = async (source: "gallery" | "camera") => {
+    dismissKeyboard();
     if (source === "gallery") {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -340,19 +348,20 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
   };
 
   const handlePasswordChangeSubmit = async () => {
+    dismissKeyboard();
     // Clear previous errors
     setErrors({});
-
+  
     // Validate the temporary password fields
     let hasErrors = false;
     const newErrors: Errors = {};
-
+  
     // Client-side validation
     if (!tempPasswords.currentPassword) {
       newErrors.currentPassword = "Current password is required";
       hasErrors = true;
     }
-
+  
     if (!tempPasswords.newPassword) {
       newErrors.newPassword = "New password is required";
       hasErrors = true;
@@ -360,31 +369,32 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
       newErrors.newPassword = "Password must be at least 8 characters";
       hasErrors = true;
     }
-
+  
     if (tempPasswords.newPassword !== tempPasswords.confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match";
       hasErrors = true;
     }
-
+  
     if (tempPasswords.newPassword === tempPasswords.currentPassword) {
       newErrors.newPassword = "New password must be different from current password";
       hasErrors = true;
     }
-
+  
     if (hasErrors) {
       setErrors(newErrors);
-      return;
+      return; // Don't close modal for client-side validation errors
     }
-
+  
     try {
       const token = await AsyncStorage.getItem("authToken");
       if (!token) {
         Alert.alert("Error", "Not authenticated");
+        setShowPasswordModal(false); // Close modal on auth error
         return;
       }
-
+  
       const response = await fetch(
-        "http://192.168.1.9:8000/api/change-password/",
+        "http://192.168.166.150:8000/api/change-password/",
         {
           method: "POST",
           headers: {
@@ -398,31 +408,33 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
           }),
         }
       );
-
+  
       if (response.ok) {
         Toast.show({
           type: "success",
           text1: "Password Changed",
           text2: "Please login with your new password",
         });
-
-        await fetch("http://192.168.1.9:8000/api/logout/", {
+  
+        await fetch("http://192.168.166.150:8000/api/logout/", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Token ${token}`,
           },
         });
-
+  
         await AsyncStorage.removeItem("authToken");
         router.push("/logout_splashscreen");
       } else {
         const errorData = await response.json();
         let errorMessage = "Password change failed";
-
+  
         // Handle specific Django error structures
         if (errorData.old_password) {
           errorMessage = errorData.old_password.join(" ");
+          // Only close modal if the error is specifically about the current password
+          setShowPasswordModal(false);
         } else if (errorData.new_password1) {
           errorMessage = errorData.new_password1.join(" ");
         } else if (errorData.new_password2) {
@@ -430,7 +442,7 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
         } else if (errorData.non_field_errors) {
           errorMessage = errorData.non_field_errors.join(" ");
         }
-
+  
         Toast.show({
           type: "error",
           text1: "Password Error",
@@ -450,6 +462,7 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
   };
 
   const handleCancelPasswordChange = () => {
+    dismissKeyboard();
     setErrors((prev) => ({
       ...prev,
       currentPassword: undefined,
@@ -531,215 +544,224 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
   }
 
   return (
-    <View style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardAvoidView}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
-      >
-        {/* Header with Return Button */}
-        <View style={styles.headerContainer}>
-          <TouchableOpacity
-            style={styles.returnButton}
-            onPress={() => router.push("/profile")}
-            activeOpacity={0.7}
-          >
-            <MaterialCommunityIcons
-              name="keyboard-return"
-              size={24}
-              color="#FE7F2D"
-            />
-          </TouchableOpacity>
-          <Text style={styles.title}></Text>
-          <View style={styles.rightHeaderSpace} />
-        </View>
-
-        <ScrollView
-          contentContainerStyle={styles.scrollContainer}
-          keyboardShouldPersistTaps="handled"
+    <TouchableWithoutFeedback onPress={dismissKeyboard}>
+      <View style={styles.container}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.keyboardAvoidView}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
         >
-          <View style={styles.profilePictureContainer}>
-            <Image
-              source={
-                profile.profilePicture
-                  ? { uri: profile.profilePicture }
-                  : require("../assets/default-profile.png")
-              }
-              style={styles.profilePicture}
-            />
-            <View style={styles.profilePictureButtons}>
-              <TouchableOpacity
-                style={styles.pictureButton}
-                onPress={() => pickImage("gallery")}
-              >
-                <Text style={styles.buttonText}>Gallery</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.pictureButton}
-                onPress={() => pickImage("camera")}
-              >
-                <Text style={styles.buttonText}>Camera</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Name</Text>
-            <TextInput
-              style={[styles.input, errors.name && styles.errorInput]}
-              value={profile.name}
-              onChangeText={(text) => handleChange("name", text)}
-              placeholder="Enter your name"
-              placeholderTextColor="#999"
-            />
-            {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={[styles.input, errors.email && styles.errorInput]}
-              value={profile.email}
-              onChangeText={(text) => handleChange("email", text)}
-              keyboardType="email-address"
-              placeholder="Enter your email"
-              placeholderTextColor="#999"
-            />
-            {errors.email && (
-              <Text style={styles.errorText}>{errors.email}</Text>
-            )}
-
+          {/* Header with Return Button */}
+          <View style={styles.headerContainer}>
             <TouchableOpacity
-              style={styles.changePasswordButton}
-              onPress={() => setShowPasswordModal(true)}
+              style={styles.returnButton}
+              onPress={() => router.push("/profile")}
+              activeOpacity={0.7}
             >
-              <Text style={styles.changePasswordButtonText}>
-                Change Password
-              </Text>
+              <MaterialCommunityIcons
+                name="keyboard-return"
+                size={24}
+                color="#FE7F2D"
+              />
             </TouchableOpacity>
+            <Text style={styles.title}></Text>
+            <View style={styles.rightHeaderSpace} />
           </View>
 
-          {/* Add extra padding at the bottom to ensure scrollable content isn't hidden behind the fixed button */}
-          <View style={styles.bottomSpacer} />
-        </ScrollView>
-
-        {/* Fixed "Save Changes" button at the bottom */}
-        <View style={styles.fixedButtonContainer}>
-          <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-            <Text style={styles.submitButtonText}>Save Changes</Text>
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
-
-      {/* Password Change Modal */}
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={showPasswordModal}
-        onRequestClose={handleCancelPasswordChange}
-      >
-        <TouchableWithoutFeedback onPress={handleCancelPasswordChange}>
-          <BlurView style={styles.blurView} intensity={20} tint="light">
-            <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
-              <Animated.View
-                style={[
-                  styles.animatedModalView,
-                  {
-                    transform: [{ scale: scaleAnim }],
-                    opacity: opacityAnim,
-                  },
-                ]}
-              >
-                <View style={styles.modalView}>
-                  <Text style={styles.modalTitle}>Change Password</Text>
-
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.label}>Current Password</Text>
-                    <TextInput
-                      style={[
-                        styles.input,
-                        errors.currentPassword && styles.errorInput,
-                      ]}
-                      value={tempPasswords.currentPassword}
-                      onChangeText={(text) =>
-                        handleTempPasswordChange("currentPassword", text)
-                      }
-                      secureTextEntry
-                      placeholder="Enter current password"
-                      placeholderTextColor="#999"
-                    />
-                    {errors.currentPassword && (
-                      <Text style={styles.errorText}>
-                        {errors.currentPassword}
-                      </Text>
-                    )}
-                  </View>
-
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.label}>New Password</Text>
-                    <TextInput
-                      style={[
-                        styles.input,
-                        errors.newPassword && styles.errorInput,
-                      ]}
-                      value={tempPasswords.newPassword}
-                      onChangeText={(text) =>
-                        handleTempPasswordChange("newPassword", text)
-                      }
-                      secureTextEntry
-                      placeholder="Enter new password (min 8 chars)"
-                      placeholderTextColor="#999"
-                    />
-                    {errors.newPassword && (
-                      <Text style={styles.errorText}>{errors.newPassword}</Text>
-                    )}
-                  </View>
-
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.label}>Confirm New Password</Text>
-                    <TextInput
-                      style={[
-                        styles.input,
-                        errors.confirmPassword && styles.errorInput,
-                      ]}
-                      value={tempPasswords.confirmPassword}
-                      onChangeText={(text) =>
-                        handleTempPasswordChange("confirmPassword", text)
-                      }
-                      secureTextEntry
-                      placeholder="Re-enter new password"
-                      placeholderTextColor="#999"
-                    />
-                    {errors.confirmPassword && (
-                      <Text style={styles.errorText}>
-                        {errors.confirmPassword}
-                      </Text>
-                    )}
-                  </View>
-
-                  <View style={styles.modalButtonContainer}>
-                    <Pressable
-                      style={[styles.modalButton, styles.modalButtonClose]}
-                      onPress={handleCancelPasswordChange}
+          <ScrollView
+            contentContainerStyle={styles.scrollContainer}
+            keyboardShouldPersistTaps="handled"
+          >
+            <TouchableWithoutFeedback onPress={dismissKeyboard}>
+              <View>
+                <View style={styles.profilePictureContainer}>
+                  <Image
+                    source={
+                      profile.profilePicture
+                        ? { uri: profile.profilePicture }
+                        : require("../assets/default-profile.png")
+                    }
+                    style={styles.profilePicture}
+                  />
+                  <View style={styles.profilePictureButtons}>
+                    <TouchableOpacity
+                      style={styles.pictureButton}
+                      onPress={() => pickImage("gallery")}
                     >
-                      <Text style={styles.modalButtonText}>Cancel</Text>
-                    </Pressable>
-                    <Pressable
-                      style={[styles.modalButton, styles.modalButtonSubmit]}
-                      onPress={handlePasswordChangeSubmit}
+                      <Text style={styles.buttonText}>Gallery</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.pictureButton}
+                      onPress={() => pickImage("camera")}
                     >
-                      <Text style={styles.modalButtonText}>
-                        Update Password
-                      </Text>
-                    </Pressable>
+                      <Text style={styles.buttonText}>Camera</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
-              </Animated.View>
+
+                <View style={styles.inputContainer}>
+                  <Text style={styles.label}>Name</Text>
+                  <TextInput
+                    style={[styles.input, errors.name && styles.errorInput]}
+                    value={profile.name}
+                    onChangeText={(text) => handleChange("name", text)}
+                    placeholder="Enter your name"
+                    placeholderTextColor="#999"
+                  />
+                  {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
+                </View>
+
+                <View style={styles.inputContainer}>
+                  <Text style={styles.label}>Email</Text>
+                  <TextInput
+                    style={[styles.input, errors.email && styles.errorInput]}
+                    value={profile.email}
+                    onChangeText={(text) => handleChange("email", text)}
+                    keyboardType="email-address"
+                    placeholder="Enter your email"
+                    placeholderTextColor="#999"
+                  />
+                  {errors.email && (
+                    <Text style={styles.errorText}>{errors.email}</Text>
+                  )}
+
+                  <TouchableOpacity
+                    style={styles.changePasswordButton}
+                    onPress={() => {
+                      dismissKeyboard();
+                      setShowPasswordModal(true);
+                    }}
+                  >
+                    <Text style={styles.changePasswordButtonText}>
+                      Change Password
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Add extra padding at the bottom to ensure scrollable content isn't hidden behind the fixed button */}
+                <View style={styles.bottomSpacer} />
+              </View>
             </TouchableWithoutFeedback>
-          </BlurView>
-        </TouchableWithoutFeedback>
-      </Modal>
-    </View>
+          </ScrollView>
+
+          {/* Fixed "Save Changes" button at the bottom */}
+          <View style={styles.fixedButtonContainer}>
+            <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+              <Text style={styles.submitButtonText}>Save Changes</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+
+        {/* Password Change Modal */}
+        <Modal
+          animationType="fade"
+          transparent={true}
+          visible={showPasswordModal}
+          onRequestClose={handleCancelPasswordChange}
+        >
+          <TouchableWithoutFeedback onPress={handleCancelPasswordChange}>
+            <BlurView style={styles.blurView} intensity={20} tint="light">
+              <TouchableWithoutFeedback onPress={dismissKeyboard}>
+                <Animated.View
+                  style={[
+                    styles.animatedModalView,
+                    {
+                      transform: [{ scale: scaleAnim }],
+                      opacity: opacityAnim,
+                    },
+                  ]}
+                >
+                  <View style={styles.modalView}>
+                    <Text style={styles.modalTitle}>Change Password</Text>
+
+                    <View style={styles.inputContainer}>
+                      <Text style={styles.label}>Current Password</Text>
+                      <TextInput
+                        style={[
+                          styles.input,
+                          errors.currentPassword && styles.errorInput,
+                        ]}
+                        value={tempPasswords.currentPassword}
+                        onChangeText={(text) =>
+                          handleTempPasswordChange("currentPassword", text)
+                        }
+                        secureTextEntry
+                        placeholder="Enter current password"
+                        placeholderTextColor="#999"
+                      />
+                      {errors.currentPassword && (
+                        <Text style={styles.errorText}>
+                          {errors.currentPassword}
+                        </Text>
+                      )}
+                    </View>
+
+                    <View style={styles.inputContainer}>
+                      <Text style={styles.label}>New Password</Text>
+                      <TextInput
+                        style={[
+                          styles.input,
+                          errors.newPassword && styles.errorInput,
+                        ]}
+                        value={tempPasswords.newPassword}
+                        onChangeText={(text) =>
+                          handleTempPasswordChange("newPassword", text)
+                        }
+                        secureTextEntry
+                        placeholder="Enter new password (min 8 chars)"
+                        placeholderTextColor="#999"
+                      />
+                      {errors.newPassword && (
+                        <Text style={styles.errorText}>{errors.newPassword}</Text>
+                      )}
+                    </View>
+
+                    <View style={styles.inputContainer}>
+                      <Text style={styles.label}>Confirm New Password</Text>
+                      <TextInput
+                        style={[
+                          styles.input,
+                          errors.confirmPassword && styles.errorInput,
+                        ]}
+                        value={tempPasswords.confirmPassword}
+                        onChangeText={(text) =>
+                          handleTempPasswordChange("confirmPassword", text)
+                        }
+                        secureTextEntry
+                        placeholder="Re-enter new password"
+                        placeholderTextColor="#999"
+                      />
+                      {errors.confirmPassword && (
+                        <Text style={styles.errorText}>
+                          {errors.confirmPassword}
+                        </Text>
+                      )}
+                    </View>
+
+                    <View style={styles.modalButtonContainer}>
+                      <Pressable
+                        style={[styles.modalButton, styles.modalButtonClose]}
+                        onPress={handleCancelPasswordChange}
+                      >
+                        <Text style={styles.modalButtonText}>Cancel</Text>
+                      </Pressable>
+                      <Pressable
+                        style={[styles.modalButton, styles.modalButtonSubmit]}
+                        onPress={handlePasswordChangeSubmit}
+                      >
+                        <Text style={styles.modalButtonText}>
+                          Update Password
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                </Animated.View>
+              </TouchableWithoutFeedback>
+            </BlurView>
+          </TouchableWithoutFeedback>
+        </Modal>
+      </View>
+    </TouchableWithoutFeedback>
   );
 };
 

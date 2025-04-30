@@ -34,7 +34,7 @@ const useUserProfile = () => {
           return;
         }
 
-        const response = await fetch("http://192.168.1.9:8000/api/current-user/", {
+        const response = await fetch("http://192.168.166.150:8000/api/current-user/", {
           method: "GET",
           headers: {
             "Content-Type": "application/json",

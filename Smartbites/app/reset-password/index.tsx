@@ -31,7 +31,7 @@ const ForgotPasswordScreen: React.FC = () => {
     setLoading(true);
     try {
       const res = await fetch(
-        "http://192.168.100.10:8000/auth/users/reset_password/",
+        "http://192.168.166.150:8000/auth/users/reset_password/",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
