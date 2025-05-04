@@ -18,6 +18,7 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Platform,
+  Dimensions
 } from "react-native";
 import { useFonts } from "expo-font";
 import { useRouter } from "expo-router";
@@ -51,6 +52,7 @@ const HomeScreen = () => {
   const [menuVisibleId, setMenuVisibleId] = useState<number | null>(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const deletionTimeout = useRef<NodeJS.Timeout | null>(null);
+  const [menuPosition, setMenuPosition] = useState<'top' | 'bottom'>('bottom');
   const [undoQueue, setUndoQueue] = useState<
     Array<{
       id: string;
@@ -581,15 +583,27 @@ const HomeScreen = () => {
                       style={styles.menuButton}
                       onPress={(e) => {
                         e.stopPropagation();
-                        toggleMenu(r.id);
+                        // Get the button position
+                        (e.currentTarget as any).measureInWindow((x: number, y: number) => {
+                          const screenHeight = Dimensions.get('window').height;
+                          const spaceBelow = screenHeight - y - 150; // 150 = menu height estimate
+                          setMenuPosition(spaceBelow > 200 ? 'bottom' : 'top');
+                          toggleMenu(r.id);
+                        });
                       }}
                     >
-                      <Icon name="more-vert" size={24} color="#555" />
+                    <Icon name="more-vert" size={24} color="#555" />
                     </TouchableOpacity>
 
                     {menuVisibleId === r.id && (
                       <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
-                        <View style={styles.menuDropdown}>
+                        <View style={[
+                          styles.menuDropdown,
+                          { 
+                            top: menuPosition === 'bottom' ? 36 : undefined,
+                            bottom: menuPosition === 'top' ? 36 : undefined,
+                          }
+                        ]}>
                         <TouchableOpacity
                             style={styles.menuItem}
                             onPress={(e) => {
@@ -1149,7 +1163,6 @@ const styles = StyleSheet.create({
   },
   menuDropdown: {
     position: "absolute",
-    top: 36,
     right: 8,
     backgroundColor: "white",
     borderRadius: 8,
@@ -1262,6 +1275,12 @@ const styles = StyleSheet.create({
   modalKeyboardAvoidingView: {
     flex: 1,
     justifyContent: "center",
+  },
+  menuDropdownTop: {
+    shadowOffset: { width: 0, height: -2 }, // Reverse shadow direction
+  },
+  menuDropdownBottom: {
+    shadowOffset: { width: 0, height: 2 },
   },
 });
 
