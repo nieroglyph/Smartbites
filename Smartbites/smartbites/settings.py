@@ -95,7 +95,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'smartbites',
         'USER': 'root',
-        'PASSWORD': 'mark1234!',
+        'PASSWORD': 'hyeju1113',
         'HOST': 'localhost',
         'PORT': '3306',
     }
@@ -164,4 +164,4 @@ DEFAULT_FROM_EMAIL   = EMAIL_HOST_USER
 #     "http://localhost:3000",  # Allow React frontend
 # ]
 
-ALLOWED_HOSTS = ['127.0.0.1','192.168.1.9', '192.168.170.150','http://localhost:3306', '192.168.254.111', '192.168.100.10', '192.168.166.150'] 
+ALLOWED_HOSTS = ['127.0.0.1','192.168.1.9', '192.168.170.150','http://localhost:3306', '192.168.254.111', '192.168.100.10', '192.168.100.10'] 

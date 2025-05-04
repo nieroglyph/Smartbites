@@ -174,7 +174,7 @@ const UserprofileScreen = () => {
       }
 
       const response = await fetch(
-        "http://192.168.166.150:8000/api/update-user-profile/",
+        "http://192.168.100.10:8000/api/update-user-profile/",
         {
           method: "PATCH",
           headers: {

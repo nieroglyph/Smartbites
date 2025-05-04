@@ -238,7 +238,7 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
       if (!token) return;
 
       const response = await fetch(
-        "http://192.168.166.150:8000/api/update-profile/",
+        "http://192.168.100.10:8000/api/update-profile/",
         {
           method: "PATCH",
           headers: {
@@ -394,7 +394,7 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
       }
   
       const response = await fetch(
-        "http://192.168.166.150:8000/api/change-password/",
+        "http://192.168.100.10:8000/api/change-password/",
         {
           method: "POST",
           headers: {
@@ -416,7 +416,7 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
           text2: "Please login with your new password",
         });
   
-        await fetch("http://192.168.166.150:8000/api/logout/", {
+        await fetch("http://192.168.100.10:8000/api/logout/", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

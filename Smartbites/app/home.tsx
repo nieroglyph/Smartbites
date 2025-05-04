@@ -205,7 +205,7 @@ const HomeScreen = () => {
 
     try {
       const res = await fetch(
-        `http://192.168.166.150:8000/api/update-recipe/${editingRecipe.id}/`,
+        `http://192.168.100.10:8000/api/update-recipe/${editingRecipe.id}/`,
         {
           method: "PUT",
           headers: {
@@ -258,7 +258,7 @@ const HomeScreen = () => {
 
         if (ids.length === 1) {
           await fetch(
-            `http://192.168.166.150:8000/api/delete-recipe/${ids[0]}/`,
+            `http://192.168.100.10:8000/api/delete-recipe/${ids[0]}/`,
             {
               method: "DELETE",
               headers: { Authorization: `Token ${token}` },
@@ -266,7 +266,7 @@ const HomeScreen = () => {
           );
         } else {
           await fetch(
-            "http://192.168.166.150:8000/api/delete-multiple-recipes/",
+            "http://192.168.100.10:8000/api/delete-multiple-recipes/",
             {
               method: "POST",
               headers: {
@@ -338,6 +338,50 @@ const HomeScreen = () => {
       }
       return prev.filter((i) => i.id !== deletionId);
     });
+  };
+
+  const handleAddToExpenses = async (recipe: Recipe) => {
+    try {
+      const costValue = parseFloat(recipe.cost?.toString() || '0');
+      
+      if (isNaN(costValue) || costValue <= 0) {
+        Toast.show({
+          type: 'error',
+          text1: 'Invalid Cost',
+          text2: 'This recipe has no valid cost information',
+        });
+        return;
+      }
+  
+      const newExpense = {
+        amount: costValue.toFixed(2),
+        description: `Recipe: ${recipe.title}`,
+        date: new Date().toLocaleString(),
+      };
+  
+      // Get existing expenses
+      const existingHistory = await AsyncStorage.getItem('expenseHistory');
+      const history = existingHistory ? JSON.parse(existingHistory) : [];
+      
+      // Add new expense
+      history.push(newExpense);
+      
+      // Save back to storage
+      await AsyncStorage.setItem('expenseHistory', JSON.stringify(history));
+  
+      Toast.show({
+        type: 'success',
+        text1: 'Expense Added',
+        text2: 'Recipe cost added to expense history',
+      });
+    } catch (error) {
+      console.error('Failed to add expense:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to add expense to history',
+      });
+    }
   };
 
   if (!fontsLoaded) return null;
@@ -464,6 +508,7 @@ const HomeScreen = () => {
                       styles.foodItemContainer,
                       isExpanded && styles.foodItemExpanded,
                       selectedRecipes.includes(r.id) && styles.selectedItem,
+                      menuVisibleId === r.id && { zIndex: 999 },
                     ]}
                   >
                       <TouchableOpacity
@@ -539,6 +584,22 @@ const HomeScreen = () => {
                     {menuVisibleId === r.id && (
                       <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
                         <View style={styles.menuDropdown}>
+                          <TouchableOpacity
+                            style={styles.menuItem}
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              handleAddToExpenses(r);
+                              setMenuVisibleId(null);
+                            }}
+                          >
+                            <FontAwesome6Icon
+                              name="peso-sign"
+                              size={18}
+                              color="#2ECC71"
+                              style={styles.menuIcon}
+                            />
+                            <Text style={styles.menuText}>Add to Expenses</Text>
+                          </TouchableOpacity>
                           <TouchableOpacity
                             style={styles.menuItem}
                             onPress={(e) => {
@@ -808,6 +869,7 @@ const styles = StyleSheet.create({
     elevation: 5,
     overflow: "visible",
     position: "relative",
+    zIndex: 1, 
   },
   foodItemTouchable: {
     padding: 12,
@@ -1094,6 +1156,8 @@ const styles = StyleSheet.create({
   },
   menuIcon: {
     marginRight: 8,
+    width: 20,
+    textAlign: 'center',
   },
   menuText: {
     fontSize: 14,
