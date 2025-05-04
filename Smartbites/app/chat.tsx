@@ -672,7 +672,6 @@ const ChatScreen = () => {
         });
       }
     }
-  
     return recipes;
   }
   

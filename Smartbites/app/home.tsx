@@ -164,6 +164,12 @@ const HomeScreen = () => {
     }
   }, [editingRecipe]);
 
+  const parseCostFromIngredients = (ingredients: string) => {
+    const priceRegex = /₱(\d+\.?\d*)/g;
+    const matches = [...ingredients.matchAll(priceRegex)];
+    return matches.reduce((sum, match) => sum + parseFloat(match[1]), 0);
+  };
+
   const handleLongPress = (recipeId: number) => {
     // Close any open menu when entering selection mode
     setMenuVisibleId(null);
@@ -584,30 +590,15 @@ const HomeScreen = () => {
                     {menuVisibleId === r.id && (
                       <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
                         <View style={styles.menuDropdown}>
-                          <TouchableOpacity
-                            style={styles.menuItem}
-                            onPress={(e) => {
-                              e.stopPropagation();
-                              handleAddToExpenses(r);
-                              setMenuVisibleId(null);
-                            }}
-                          >
-                            <FontAwesome6Icon
-                              name="peso-sign"
-                              size={18}
-                              color="#2ECC71"
-                              style={styles.menuIcon}
-                            />
-                            <Text style={styles.menuText}>Add to Expenses</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
+                        <TouchableOpacity
                             style={styles.menuItem}
                             onPress={(e) => {
                               e.stopPropagation();
                               setEditedTitle(r.title);
                               setEditedIngredients(r.ingredients);
                               setEditedInstructions(r.instructions);
-                              setEditedCost(r.cost?.toString() || "");
+                              // Initialize with calculated cost
+                              setEditedCost(parseCostFromIngredients(r.ingredients).toFixed(2));
                               setEditingRecipe(r);
                               setMenuVisibleId(null);
                             }}
@@ -634,6 +625,22 @@ const HomeScreen = () => {
                               style={styles.menuIcon}
                             />
                             <Text style={styles.menuText}>Delete</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.menuItem}
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              handleAddToExpenses(r);
+                              setMenuVisibleId(null);
+                            }}
+                          >
+                            <FontAwesome6Icon
+                              name="peso-sign"
+                              size={18}
+                              color="#2ECC71"
+                              style={styles.menuIcon}
+                            />
+                            <Text style={styles.menuText}>Add to Expenses</Text>
                           </TouchableOpacity>
                         </View>
                       </TouchableWithoutFeedback>
@@ -687,7 +694,12 @@ const HomeScreen = () => {
                         style={[styles.textInput, styles.messageInput]}
                         multiline
                         value={editedIngredients}
-                        onChangeText={setEditedIngredients}
+                        onChangeText={(text) => {
+                          setEditedIngredients(text);
+                          // Automatically calculate cost when ingredients change
+                          const totalCost = parseCostFromIngredients(text);
+                          setEditedCost(totalCost.toFixed(2));
+                        }}
                         placeholder="Enter ingredients (one per line)..."
                         placeholderTextColor="#7F8C8D"
                       />
@@ -702,12 +714,14 @@ const HomeScreen = () => {
                         placeholderTextColor="#7F8C8D"
                       />
 
-                      <Text style={styles.inputLabel}>Cost (optional)</Text>
+                      <Text style={styles.inputLabel}>
+                        Total Cost (auto-calculated) {editedCost && `₱${editedCost}`}
+                      </Text>
                       <TextInput
                         style={styles.textInput}
                         value={editedCost}
                         onChangeText={setEditedCost}
-                        placeholder="Enter estimated cost..."
+                        placeholder="Or enter custom total..."
                         placeholderTextColor="#7F8C8D"
                         keyboardType="numeric"
                       />
