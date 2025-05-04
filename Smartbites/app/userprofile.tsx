@@ -174,7 +174,7 @@ const UserprofileScreen = () => {
       }
 
       const response = await fetch(
-        "http://192.168.166.150:8000/api/update-user-profile/",
+        "http://192.168.1.7:8000/api/update-user-profile/",
         {
           method: "PATCH",
           headers: {
@@ -645,36 +645,41 @@ const UserprofileScreen = () => {
                   </Text>
 
                   <View style={styles.addAllergyContainer}>
-                    <TextInput
-                      style={styles.inputAllergy}
-                      value={newAllergy}
-                      onChangeText={setNewAllergy}
-                      placeholder="Type allergen name"
-                      placeholderTextColor="#7F8C8D"
-                    />
-                    <TouchableOpacity
-                      style={[
-                        styles.addButton,
-                        !newAllergy && styles.addButtonDisabled,
-                      ]}
-                      onPress={handleAddAllergy}
-                      disabled={!newAllergy}
-                    >
-                      <Text style={styles.addButtonText}>Add</Text>
-                    </TouchableOpacity>
-                  </View>
+                  <TextInput
+                    style={styles.inputAllergy}
+                    value={newAllergy}
+                    onChangeText={setNewAllergy}
+                    placeholder="Type allergen name"
+                    placeholderTextColor="#7F8C8D"
+                  />
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.addButton,
+                      !newAllergy && styles.addButtonDisabled,
+                      pressed && styles.pressedButton,
+                    ]}
+                    onPress={handleAddAllergy}
+                    disabled={!newAllergy}
+                  >
+                    <Text style={styles.addButtonText}>Add</Text>
+                  </Pressable>
+                </View>
 
-                  <View style={styles.modalButtonContainer}>
-                    <Pressable
-                      style={styles.modalButtonSave}
-                      onPress={async () => {
-                        await handleSaveAllergies();
-                        setShowAllergiesModal(false);
-                      }}
-                    >
-                      <Text style={styles.modalButtonText}>Save & Close</Text>
-                    </Pressable>
-                  </View>
+                <View style={styles.modalButtonContainer}>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.modalButton,
+                    styles.modalButtonSubmit,
+                    pressed && styles.pressedButton,
+                  ]}
+                  onPress={async () => {
+                    await handleSaveAllergies();
+                    setShowAllergiesModal(false);
+                  }}
+                >
+                  <Text style={styles.modalButtonText}>Save & Close</Text>
+                </Pressable>
+              </View>
                 </View>
               </Animated.View>
             </TouchableWithoutFeedback>
@@ -1056,6 +1061,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     justifyContent: "center",
     alignItems: "center",
+    minWidth: 80,
   },
   addButtonDisabled: {
     backgroundColor: "rgba(255,255,255,0.1)",
@@ -1071,7 +1077,18 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#2D2F2F",
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "center",
+  },
+  modalButton: {
+    borderRadius: 8,
+    padding: 14,
+    elevation: 0,
+    minWidth: 100,
+    alignItems: 'center',
+    flex: 1,
+  },
+  modalButtonSubmit: {
+    backgroundColor: '#FE7F2D',
   },
   modalButtonSave: {
     backgroundColor: "#FE7F2D",
@@ -1110,6 +1127,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
     fontFamily: "IstokWeb-Regular",
+  },
+  pressedButton: {
+    opacity: 0.7,
   },
 });
 

@@ -19,23 +19,17 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { BlurView } from "expo-blur";
-import * as ImagePicker from "expo-image-picker";
-import {
-  CameraView,
-  useCameraPermissions,
-  CameraType,
-  CameraCapturedPicture,
-} from "expo-camera";
+import * as ImagePicker from 'expo-image-picker';
 import {
   AntDesign,
   MaterialIcons,
   MaterialCommunityIcons,
 } from "@expo/vector-icons";
-import PhotoPreviewSection from "./photo_preview_section";
 import { router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import useUserProfile from "./hooks/useUserProfile";
 import Toast from "react-native-toast-message";
+import { StyleProp, ViewStyle } from 'react-native';
 
 interface Profile {
   name: string;
@@ -56,13 +50,15 @@ interface Errors {
 }
 
 interface ProfileEditProps {
-  navigation?: any; // For navigation purposes
+  navigation?: any;
 }
+
+type TouchableStyleProps = {
+  pressed: boolean;
+};
 
 const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
   const { profile: fetchedProfile, loading, error } = useUserProfile();
-
-  // Replace the initial state and add useEffect for data fetching
   const [profile, setProfile] = useState<Profile>({
     name: "",
     email: "",
@@ -71,53 +67,31 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
     confirmPassword: "",
     profilePicture: null,
   });
-
-  // Store temporary password values for the modal
   const [tempPasswords, setTempPasswords] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
-
   const [errors, setErrors] = useState<Errors>({});
   const [isPasswordEditing, setIsPasswordEditing] = useState<boolean>(false);
-  const [showCamera, setShowCamera] = useState<boolean>(false);
-  const [photoPreview, setPhotoPreview] =
-    useState<CameraCapturedPicture | null>(null);
-  const [cameraType, setCameraType] = useState<CameraType>("front");
-  const [permission, requestPermission] = useCameraPermissions();
   const [showPasswordModal, setShowPasswordModal] = useState<boolean>(false);
-  const cameraRef = useRef<CameraView>(null);
+  const [showImagePickerModal, setShowImagePickerModal] = useState<boolean>(false);
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
-  // Sync fetched data with local state
   useEffect(() => {
     if (fetchedProfile) {
       setProfile((prev) => ({
         ...prev,
         name: fetchedProfile.name,
         email: fetchedProfile.email,
+        profilePicture: fetchedProfile.profilePicture || null,
       }));
     }
   }, [fetchedProfile]);
 
   useEffect(() => {
-    if (permission && !permission.granted) {
-      setShowCamera(false);
-    }
-  }, [permission]);
-
-  useEffect(() => {
-    if (showPasswordModal) {
-      // When opening modal, always initialize with empty values
-      // This ensures previously entered passwords don't show up
-      setTempPasswords({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      });
-
+    if (showPasswordModal || showImagePickerModal) {
       Animated.parallel([
         Animated.timing(scaleAnim, {
           toValue: 1,
@@ -145,17 +119,15 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
         }),
       ]).start();
     }
-  }, [showPasswordModal]);
+  }, [showPasswordModal, showImagePickerModal]);
 
-  // Function to dismiss keyboard
   const dismissKeyboard = () => {
     Keyboard.dismiss();
   };
 
-  // Handle loading and error states
   if (loading) {
     return (
-      <View>
+      <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#3498DB" />
       </View>
     );
@@ -163,35 +135,32 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
 
   if (error) {
     return (
-      <View>
-        <Text>Error loading profile: {error}</Text>
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>Error loading profile: {error}</Text>
       </View>
     );
   }
 
   const handleChange = (field: keyof Profile, value: string) => {
     setProfile((prev) => ({ ...prev, [field]: value }));
-
     if (errors[field as keyof Errors]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
   };
 
-  // Handle changes in the modal's temporary password fields
   const handleTempPasswordChange = (
     field: keyof typeof tempPasswords,
     value: string
   ) => {
     setTempPasswords((prev) => ({ ...prev, [field]: value }));
-
-    // Clear errors when typing
-    if (
-      field === "currentPassword" ||
-      field === "newPassword" ||
-      field === "confirmPassword"
-    ) {
+    if (field === "currentPassword" || field === "newPassword" || field === "confirmPassword") {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
+  };
+
+  const handleImageSelect = (imageSource: string) => {
+    setProfile(prev => ({ ...prev, profilePicture: imageSource }));
+    setShowImagePickerModal(false);
   };
 
   const validate = (): boolean => {
@@ -208,10 +177,6 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
 
       if (profile.newPassword !== profile.confirmPassword) {
         newErrors.confirmPassword = "Passwords do not match";
-        Alert.alert(
-          "Password Mismatch",
-          "The new password and confirm password fields do not match."
-        );
       }
     }
 
@@ -237,18 +202,38 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
       const token = await AsyncStorage.getItem("authToken");
       if (!token) return;
 
+      const formData = new FormData();
+      formData.append('full_name', profile.name);
+      formData.append('email', profile.email);
+      
+      if (profile.profilePicture && profile.profilePicture.startsWith('file:')) {
+        formData.append('profile_picture', {
+          uri: profile.profilePicture,
+          type: 'image/jpeg',
+          name: 'profile.jpg',
+        } as any);
+      } else if (typeof profile.profilePicture === 'number') {
+        // Handle local require() images
+        const localUri = Image.resolveAssetSource(profile.profilePicture).uri;
+        const filename = localUri.split('/').pop();
+        const match = /\.(\w+)$/.exec(filename || '');
+        const type = match ? `image/${match[1]}` : 'image';
+        
+        formData.append('profile_picture', {
+          uri: localUri,
+          type,
+          name: filename || 'profile.jpg',
+        } as any);
+      }
+
       const response = await fetch(
-        "http://192.168.166.150:8000/api/update-profile/",
+        "http://192.168.1.7:8000/api/update-profile/",
         {
           method: "PATCH",
           headers: {
-            "Content-Type": "application/json",
-            Authorization: `Token ${token}`,
+            "Authorization": `Token ${token}`,
           },
-          body: JSON.stringify({
-            full_name: profile.name,
-            email: profile.email,
-          }),
+          body: formData,
         }
       );
 
@@ -277,86 +262,13 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
     }
   };
 
-  const pickImage = async (source: "gallery" | "camera") => {
-    dismissKeyboard();
-    if (source === "gallery") {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 1,
-      });
-
-      if (!result.canceled && result.assets && result.assets[0].uri) {
-        setProfile((prev) => ({
-          ...prev,
-          profilePicture: result.assets[0].uri,
-        }));
-      }
-    } else {
-      if (Platform.OS === "web") {
-        Alert.alert("Not supported", "Camera is not supported on web");
-        return;
-      }
-
-      const { granted } = await requestPermission();
-      if (!granted) {
-        Alert.alert(
-          "Permission required",
-          "Camera access is needed to take photos"
-        );
-        return;
-      }
-      setShowCamera(true);
-    }
-  };
-
-  const toggleCameraType = () => {
-    setCameraType((current) => (current === "back" ? "front" : "back"));
-  };
-
-  const handleTakePhoto = async () => {
-    if (cameraRef.current) {
-      try {
-        const photo = await cameraRef.current.takePictureAsync({
-          quality: 1,
-          base64: true,
-          exif: false,
-        });
-
-        if (photo) {
-          setPhotoPreview(photo);
-          setShowCamera(false);
-        }
-      } catch (error) {
-        console.error("Error taking photo:", error);
-        Alert.alert("Error", "Failed to take photo");
-      }
-    }
-  };
-
-  const handleAcceptPhoto = () => {
-    if (photoPreview?.uri) {
-      setProfile((prev) => ({ ...prev, profilePicture: photoPreview.uri }));
-      setPhotoPreview(null);
-    }
-  };
-
-  const handleRetakePhoto = () => {
-    setPhotoPreview(null);
-    setShowCamera(true);
-  };
-
   const handlePasswordChangeSubmit = async () => {
     dismissKeyboard();
-    // Clear previous errors
     setErrors({});
   
-    // Validate the temporary password fields
     let hasErrors = false;
     const newErrors: Errors = {};
   
-    // Client-side validation
     if (!tempPasswords.currentPassword) {
       newErrors.currentPassword = "Current password is required";
       hasErrors = true;
@@ -382,19 +294,19 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
   
     if (hasErrors) {
       setErrors(newErrors);
-      return; // Don't close modal for client-side validation errors
+      return;
     }
   
     try {
       const token = await AsyncStorage.getItem("authToken");
       if (!token) {
         Alert.alert("Error", "Not authenticated");
-        setShowPasswordModal(false); // Close modal on auth error
+        setShowPasswordModal(false);
         return;
       }
   
       const response = await fetch(
-        "http://192.168.166.150:8000/api/change-password/",
+        "http://192.168.1.7:8000/api/change-password/",
         {
           method: "POST",
           headers: {
@@ -416,7 +328,7 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
           text2: "Please login with your new password",
         });
   
-        await fetch("http://192.168.166.150:8000/api/logout/", {
+        await fetch("http://192.168.1.7:8000/api/logout/", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -430,10 +342,8 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
         const errorData = await response.json();
         let errorMessage = "Password change failed";
   
-        // Handle specific Django error structures
         if (errorData.old_password) {
           errorMessage = errorData.old_password.join(" ");
-          // Only close modal if the error is specifically about the current password
           setShowPasswordModal(false);
         } else if (errorData.new_password1) {
           errorMessage = errorData.new_password1.join(" ");
@@ -469,79 +379,27 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
       newPassword: undefined,
       confirmPassword: undefined,
     }));
-
     setShowPasswordModal(false);
   };
 
-  if (photoPreview) {
-    return (
-      <PhotoPreviewSection
-        photo={photoPreview}
-        handleRetakePhoto={handleRetakePhoto}
-        handleAcceptPhoto={handleAcceptPhoto}
-      />
-    );
-  }
-
-  if (showCamera) {
-    if (!permission) {
-      return <View />;
+  const pickImage = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permissionResult.granted) {
+      alert("Permission to access camera roll is required!");
+      return;
     }
-
-    if (!permission.granted) {
-      return (
-        <View style={styles.cameraPermissionContainer}>
-          <Text style={styles.permissionText}>
-            We need your permission to show the camera
-          </Text>
-          <TouchableOpacity
-            onPress={requestPermission}
-            style={styles.permissionButton}
-          >
-            <Text style={styles.permissionButtonText}>Grant Permission</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setShowCamera(false)}
-            style={[
-              styles.permissionButton,
-              { marginTop: 10, backgroundColor: "#ccc" },
-            ]}
-          >
-            <Text style={styles.permissionButtonText}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
-      );
+    
+    const pickerResult = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+    
+    if (!pickerResult.canceled && pickerResult.assets) {
+      handleImageSelect(pickerResult.assets[0].uri);
     }
-
-    return (
-      <View style={styles.cameraContainer}>
-        <CameraView style={styles.camera} facing={cameraType} ref={cameraRef}>
-          <View style={styles.cameraButtonContainer}>
-            <View style={styles.cameraButtonRow}>
-              <TouchableOpacity
-                style={styles.cameraControlButton}
-                onPress={() => setShowCamera(false)}
-              >
-                <AntDesign name="close" size={24} color="white" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.cameraMainButton}
-                onPress={handleTakePhoto}
-              >
-                <View style={styles.cameraMainButtonInner} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.cameraControlButton}
-                onPress={toggleCameraType}
-              >
-                <MaterialIcons name="flip-camera-ios" size={24} color="white" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </CameraView>
-      </View>
-    );
-  }
+  };
 
   return (
     <TouchableWithoutFeedback onPress={dismissKeyboard}>
@@ -551,7 +409,6 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
           style={styles.keyboardAvoidView}
           keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
         >
-          {/* Header with Return Button */}
           <View style={styles.headerContainer}>
             <TouchableOpacity
               style={styles.returnButton}
@@ -569,35 +426,32 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
           </View>
 
           <ScrollView
-            contentContainerStyle={styles.scrollContainer}
-            keyboardShouldPersistTaps="handled"
-          >
-            <TouchableWithoutFeedback onPress={dismissKeyboard}>
-              <View>
-                <View style={styles.profilePictureContainer}>
+          contentContainerStyle={styles.scrollContainer}
+          keyboardShouldPersistTaps="handled"
+        >
+          <TouchableWithoutFeedback onPress={dismissKeyboard}>
+            <View>
+              <View style={styles.profilePictureContainer}>
+                <TouchableOpacity 
+                  onPress={() => setShowImagePickerModal(true)}
+                  activeOpacity={0.7}
+                  style={styles.profilePictureWrapper}
+                >
                   <Image
                     source={
                       profile.profilePicture
-                        ? { uri: profile.profilePicture }
-                        : require("../assets/default-profile.png")
+                        ? typeof profile.profilePicture === 'string' 
+                          ? { uri: profile.profilePicture }
+                          : profile.profilePicture
+                        : require("../assets/profiles/default-profile.png")
                     }
                     style={styles.profilePicture}
                   />
-                  <View style={styles.profilePictureButtons}>
-                    <TouchableOpacity
-                      style={styles.pictureButton}
-                      onPress={() => pickImage("gallery")}
-                    >
-                      <Text style={styles.buttonText}>Gallery</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.pictureButton}
-                      onPress={() => pickImage("camera")}
-                    >
-                      <Text style={styles.buttonText}>Camera</Text>
-                    </TouchableOpacity>
+                  <View style={styles.editIconContainer}>
+                    <MaterialIcons name="edit" size={20} color="#FBFCF8" />
                   </View>
-                </View>
+                </TouchableOpacity>
+              </View>
 
                 <View style={styles.inputContainer}>
                   <Text style={styles.label}>Name</Text>
@@ -638,13 +492,11 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
                   </TouchableOpacity>
                 </View>
 
-                {/* Add extra padding at the bottom to ensure scrollable content isn't hidden behind the fixed button */}
                 <View style={styles.bottomSpacer} />
               </View>
             </TouchableWithoutFeedback>
           </ScrollView>
 
-          {/* Fixed "Save Changes" button at the bottom */}
           <View style={styles.fixedButtonContainer}>
             <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
               <Text style={styles.submitButtonText}>Save Changes</Text>
@@ -737,21 +589,27 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
                         </Text>
                       )}
                     </View>
-
+                    
                     <View style={styles.modalButtonContainer}>
                       <Pressable
-                        style={[styles.modalButton, styles.modalButtonClose]}
+                        style={({ pressed }) => [
+                          styles.modalButton,
+                          styles.modalButtonClose,
+                          pressed && styles.pressedButton,
+                        ]}
                         onPress={handleCancelPasswordChange}
                       >
                         <Text style={styles.modalButtonText}>Cancel</Text>
                       </Pressable>
                       <Pressable
-                        style={[styles.modalButton, styles.modalButtonSubmit]}
+                        style={({ pressed }) => [
+                          styles.modalButton,
+                          styles.modalButtonSubmit,
+                          pressed && styles.pressedButton,
+                        ]}
                         onPress={handlePasswordChangeSubmit}
                       >
-                        <Text style={styles.modalButtonText}>
-                          Update Password
-                        </Text>
+                        <Text style={styles.modalButtonText}>Update Password</Text>
                       </Pressable>
                     </View>
                   </View>
@@ -759,6 +617,87 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
               </TouchableWithoutFeedback>
             </BlurView>
           </TouchableWithoutFeedback>
+        </Modal>
+
+        {/* Profile Picture Picker Modal */}
+        <Modal
+          animationType="fade"
+          transparent={true}
+          visible={showImagePickerModal}
+          onRequestClose={() => setShowImagePickerModal(false)}
+        >
+          <BlurView style={styles.blurView} intensity={20} tint="light">
+            <TouchableWithoutFeedback onPress={() => setShowImagePickerModal(false)}>
+              <Animated.View style={[styles.animatedModalView, { transform: [{ scale: scaleAnim }], opacity: opacityAnim }]}>
+                <View style={styles.imagePickerModal}>
+                  <Text style={styles.modalTitle}>Choose Profile Picture</Text>
+                  
+                  <ScrollView contentContainerStyle={styles.imageOptionsContainer}>
+                    <TouchableOpacity 
+                      style={styles.imageOption}
+                      onPress={() => handleImageSelect(require("../assets/profiles/default-profile.png"))}
+                    >
+                      <Image 
+                        source={require("../assets/profiles/default-profile.png")} 
+                        style={styles.imageOptionThumbnail}
+                      />
+                      <Text style={styles.imageOptionText}>Default</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={styles.imageOption}
+                      onPress={() => handleImageSelect(require("../assets/profiles/Smartbite_black.png"))}
+                    >
+                      <Image 
+                        source={require("../assets/profiles/Smartbite_black.png")} 
+                        style={styles.imageOptionThumbnail}
+                      />
+                      <Text style={styles.imageOptionText}>Profile 1</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={styles.imageOption}
+                      onPress={() => handleImageSelect(require("../assets/profiles/Smartbites_blue.png"))}
+                    >
+                      <Image 
+                        source={require("../assets/profiles/Smartbites_blue.png")} 
+                        style={styles.imageOptionThumbnail}
+                      />
+                      <Text style={styles.imageOptionText}>Profile 2</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity 
+                      style={styles.imageOption}
+                      onPress={() => handleImageSelect(require("../assets/profiles/Smartbites_red.png"))}
+                    >
+                      <Image 
+                        source={require("../assets/profiles/Smartbites_red.png")} 
+                        style={styles.imageOptionThumbnail}
+                      />
+                      <Text style={styles.imageOptionText}>Profile 3</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={styles.imageOption}
+                      onPress={pickImage}
+                    >
+                      <View style={[styles.imageOptionThumbnail, styles.galleryOption]}>
+                        <MaterialIcons name="photo-library" size={30} color="#FE7F2D" />
+                      </View>
+                      <Text style={styles.imageOptionText}>From Gallery</Text>
+                    </TouchableOpacity>
+                  </ScrollView>
+                  
+                  <TouchableOpacity 
+                    style={styles.cancelButton}
+                    onPress={() => setShowImagePickerModal(false)}
+                  >
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              </Animated.View>
+            </TouchableWithoutFeedback>
+          </BlurView>
         </Modal>
       </View>
     </TouchableWithoutFeedback>
@@ -772,6 +711,19 @@ const styles = StyleSheet.create({
   },
   keyboardAvoidView: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#00272B',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#00272B',
+    padding: 20,
   },
   headerContainer: {
     flexDirection: "row",
@@ -802,26 +754,30 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 20,
   },
+  profilePictureWrapper: {
+    position: 'relative',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    overflow: 'visible',
+  },
   profilePicture: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    marginBottom: 10,
   },
-  profilePictureButtons: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 8,
-  },
-  pictureButton: {
-    backgroundColor: "#FE7F2D",
-    padding: 10,
-    borderRadius: 5,
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 14,
+  editIconContainer: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#FE7F2D',
+    borderRadius: 12,
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#00272B',
   },
   inputContainer: {
     marginBottom: 25,
@@ -874,72 +830,6 @@ const styles = StyleSheet.create({
   bottomSpacer: {
     height: 60,
   },
-  cameraContainer: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  camera: {
-    flex: 1,
-  },
-  cameraButtonContainer: {
-    position: "absolute",
-    bottom: 40,
-    left: 0,
-    right: 0,
-    alignItems: "center",
-  },
-  cameraButtonRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    width: "80%",
-    backgroundColor: "rgba(0,0,0,0.5)",
-    borderRadius: 30,
-    paddingVertical: 15,
-    paddingHorizontal: 25,
-  },
-  cameraControlButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  cameraMainButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    borderWidth: 3,
-    borderColor: "white",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  cameraMainButtonInner: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "white",
-  },
-  cameraPermissionContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  permissionText: {
-    fontSize: 16,
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  permissionButton: {
-    backgroundColor: "#007AFF",
-    padding: 15,
-    borderRadius: 5,
-  },
-  permissionButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-  },
   changePasswordButton: {
     marginTop: 8,
     padding: 10,
@@ -972,6 +862,49 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#2D2F2F",
   },
+  imagePickerModal: {
+    backgroundColor: '#002F38',
+    borderRadius: 10,
+    padding: 20,
+    maxHeight: '80%',
+  },
+  imageOptionsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+  imageOption: {
+    alignItems: 'center',
+    margin: 10,
+    width: 100,
+  },
+  imageOptionThumbnail: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 5,
+    borderWidth: 2,
+    borderColor: '#434545',
+  },
+  galleryOption: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  imageOptionText: {
+    color: '#FBFCF8',
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  cancelButton: {
+    marginTop: 20,
+    padding: 10,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: '#FE7F2D',
+    fontWeight: '500',
+  },
   modalTitle: {
     fontSize: 18,
     fontWeight: "700",
@@ -992,6 +925,9 @@ const styles = StyleSheet.create({
     minWidth: 100,
     alignItems: "center",
     flex: 1,
+  },
+  pressedButton: {
+    opacity: 0.5,
   },
   modalButtonClose: {
     backgroundColor: "rgba(255,255,255,0.1)",

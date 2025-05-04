@@ -193,7 +193,7 @@ const ProfileScreen = () => {
 
       // Compose the email
       const result = await MailComposer.composeAsync({
-        recipients: ['dt.smartbites@gmail.com'], // Replace with your support email
+        recipients: ['dt.smartbites@gmail.com'],
         subject: `Feedback: ${category}`,
         body: `
           Message: ${feedbackMessage}
@@ -225,7 +225,7 @@ const ProfileScreen = () => {
       const token = await AsyncStorage.getItem("authToken");
       if (!token) return;
 
-      await fetch("http://192.168.166.150:8000/api/logout/", {
+      await fetch("http://192.168.1.7:8000/api/logout/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -262,7 +262,7 @@ const ProfileScreen = () => {
             <View style={styles.profileHeader}>
               <View style={styles.profilePictureContainer}>
                 <Image
-                  source={profile.profilePicture ? { uri: profile.profilePicture } : require('../assets/default-profile.png')}
+                  source={profile.profilePicture ? { uri: profile.profilePicture } : require('../assets/profiles/default-profile.png')}
                   style={styles.profilePicture}
                 />
               </View>
@@ -390,30 +390,35 @@ const ProfileScreen = () => {
                     numberOfLines={4}
                   />
 
-                  <View style={styles.modalButtonContainer}>
-                    <Pressable
-                      style={[styles.modalButton, styles.modalButtonClose]}
-                      onPress={() => setFeedbackModalVisible(false)}
-                      disabled={isSubmitting}
-                    >
-                      <Text style={styles.modalButtonText}>Cancel</Text>
-                    </Pressable>
-                    <Pressable
-                      style={[
-                        styles.modalButton, 
-                        styles.modalButtonSubmit,
-                        (!feedbackMessage || (feedbackCategory === 'Other' && !otherCategoryText)) && styles.disabledButton
-                      ]}
-                      onPress={handleSubmitFeedback}
-                      disabled={isSubmitting || !feedbackMessage || (feedbackCategory === 'Other' && !otherCategoryText)}
-                    >
-                      {isSubmitting ? (
-                        <ActivityIndicator size="small" color="#FFFFFF" />
-                      ) : (
-                        <Text style={styles.modalButtonText}>Submit</Text>
-                      )}
-                    </Pressable>
-                  </View>
+<View style={styles.modalButtonContainer}>
+  <Pressable
+    style={({ pressed }) => [
+      styles.modalButton,
+      styles.modalButtonClose,
+      pressed && styles.pressedButton,
+    ]}
+    onPress={() => setFeedbackModalVisible(false)}
+    disabled={isSubmitting}
+  >
+    <Text style={styles.modalButtonText}>Cancel</Text>
+  </Pressable>
+  <Pressable
+    style={({ pressed }) => [
+      styles.modalButton, 
+      styles.modalButtonSubmit,
+      (!feedbackMessage || (feedbackCategory === 'Other' && !otherCategoryText)) && styles.disabledButton,
+      pressed && styles.pressedButton,
+    ]}
+    onPress={handleSubmitFeedback}
+    disabled={isSubmitting || !feedbackMessage || (feedbackCategory === 'Other' && !otherCategoryText)}
+  >
+    {isSubmitting ? (
+      <ActivityIndicator size="small" color="#FFFFFF" />
+    ) : (
+      <Text style={styles.modalButtonText}>Submit</Text>
+    )}
+  </Pressable>
+</View>
                 </View>
               </Animated.View>
             </TouchableWithoutFeedback>
@@ -671,6 +676,9 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.4,
+  },
+  pressedButton: {
+    opacity: 0.5,
   },
 });
 

@@ -205,7 +205,7 @@ const HomeScreen = () => {
 
     try {
       const res = await fetch(
-        `http://192.168.166.150:8000/api/update-recipe/${editingRecipe.id}/`,
+        `http://192.168.1.7:8000/api/update-recipe/${editingRecipe.id}/`,
         {
           method: "PUT",
           headers: {
@@ -258,7 +258,7 @@ const HomeScreen = () => {
 
         if (ids.length === 1) {
           await fetch(
-            `http://192.168.166.150:8000/api/delete-recipe/${ids[0]}/`,
+            `http://192.168.1.7:8000/api/delete-recipe/${ids[0]}/`,
             {
               method: "DELETE",
               headers: { Authorization: `Token ${token}` },
@@ -266,7 +266,7 @@ const HomeScreen = () => {
           );
         } else {
           await fetch(
-            "http://192.168.166.150:8000/api/delete-multiple-recipes/",
+            "http://192.168.1.7:8000/api/delete-multiple-recipes/",
             {
               method: "POST",
               headers: {
@@ -651,20 +651,28 @@ const HomeScreen = () => {
                         keyboardType="numeric"
                       />
 
-                      <View style={styles.modalButtonContainer}>
-                        <Pressable
-                          style={[styles.modalButton, styles.modalButtonClose]}
-                          onPress={() => setEditingRecipe(null)}
-                        >
-                          <Text style={styles.modalButtonText}>Cancel</Text>
-                        </Pressable>
-                        <Pressable
-                          style={[styles.modalButton, styles.modalButtonSubmit]}
-                          onPress={updateRecipe}
-                        >
-                          <Text style={styles.modalButtonText}>Save Changes</Text>
-                        </Pressable>
-                      </View>
+                    <View style={styles.modalButtonContainer}>
+                      <Pressable
+                        style={({ pressed }) => [
+                          styles.modalButton,
+                          styles.modalButtonClose,
+                          pressed && styles.pressedButton,
+                        ]}
+                        onPress={() => setEditingRecipe(null)}
+                      >
+                        <Text style={styles.modalButtonText}>Cancel</Text>
+                      </Pressable>
+                      <Pressable
+                        style={({ pressed }) => [
+                          styles.modalButton,
+                          styles.modalButtonSubmit,
+                          pressed && styles.pressedButton,
+                        ]}
+                        onPress={updateRecipe}
+                      >
+                        <Text style={styles.modalButtonText}>Save Changes</Text>
+                      </Pressable>
+                    </View>
                     </View>
                   </Animated.View>
                 </TouchableWithoutFeedback>
@@ -741,7 +749,7 @@ const HomeScreen = () => {
                 onPress={() => router.push("/chat")}
               >
                 <FontAwesome6Icon name="brain" size={24} color="#FE7F2D" />
-                <Text style={[styles.navText, styles.customFont]}>Chat</Text>
+                <Text style={[styles.navText, styles.customFont]}>BiteAI</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.navItem}
@@ -1184,6 +1192,9 @@ const styles = StyleSheet.create({
   modalKeyboardAvoidingView: {
     flex: 1,
     justifyContent: "center",
+  },
+  pressedButton: {
+    opacity: 0.5,
   },
 });
 
