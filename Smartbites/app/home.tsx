@@ -18,6 +18,7 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Platform,
+  Dimensions
 } from "react-native";
 import { useFonts } from "expo-font";
 import { useRouter } from "expo-router";
@@ -51,6 +52,7 @@ const HomeScreen = () => {
   const [menuVisibleId, setMenuVisibleId] = useState<number | null>(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const deletionTimeout = useRef<NodeJS.Timeout | null>(null);
+  const [menuPosition, setMenuPosition] = useState<'top' | 'bottom'>('bottom');
   const [undoQueue, setUndoQueue] = useState<
     Array<{
       id: string;
@@ -164,6 +166,12 @@ const HomeScreen = () => {
     }
   }, [editingRecipe]);
 
+  const parseCostFromIngredients = (ingredients: string) => {
+    const priceRegex = /₱(\d+\.?\d*)/g;
+    const matches = [...ingredients.matchAll(priceRegex)];
+    return matches.reduce((sum, match) => sum + parseFloat(match[1]), 0);
+  };
+
   const handleLongPress = (recipeId: number) => {
     // Close any open menu when entering selection mode
     setMenuVisibleId(null);
@@ -205,7 +213,11 @@ const HomeScreen = () => {
 
     try {
       const res = await fetch(
+<<<<<<< HEAD
         `http://192.168.1.7:8000/api/update-recipe/${editingRecipe.id}/`,
+=======
+        `http://192.168.100.10:8000/api/update-recipe/${editingRecipe.id}/`,
+>>>>>>> c07fac16838f279a42e35e6b16c0883067079797
         {
           method: "PUT",
           headers: {
@@ -258,7 +270,11 @@ const HomeScreen = () => {
 
         if (ids.length === 1) {
           await fetch(
+<<<<<<< HEAD
             `http://192.168.1.7:8000/api/delete-recipe/${ids[0]}/`,
+=======
+            `http://192.168.100.10:8000/api/delete-recipe/${ids[0]}/`,
+>>>>>>> c07fac16838f279a42e35e6b16c0883067079797
             {
               method: "DELETE",
               headers: { Authorization: `Token ${token}` },
@@ -266,7 +282,11 @@ const HomeScreen = () => {
           );
         } else {
           await fetch(
+<<<<<<< HEAD
             "http://192.168.1.7:8000/api/delete-multiple-recipes/",
+=======
+            "http://192.168.100.10:8000/api/delete-multiple-recipes/",
+>>>>>>> c07fac16838f279a42e35e6b16c0883067079797
             {
               method: "POST",
               headers: {
@@ -338,6 +358,50 @@ const HomeScreen = () => {
       }
       return prev.filter((i) => i.id !== deletionId);
     });
+  };
+
+  const handleAddToExpenses = async (recipe: Recipe) => {
+    try {
+      const costValue = parseFloat(recipe.cost?.toString() || '0');
+      
+      if (isNaN(costValue) || costValue <= 0) {
+        Toast.show({
+          type: 'error',
+          text1: 'Invalid Cost',
+          text2: 'This recipe has no valid cost information',
+        });
+        return;
+      }
+  
+      const newExpense = {
+        amount: costValue.toFixed(2),
+        description: `Recipe: ${recipe.title}`,
+        date: new Date().toLocaleString(),
+      };
+  
+      // Get existing expenses
+      const existingHistory = await AsyncStorage.getItem('expenseHistory');
+      const history = existingHistory ? JSON.parse(existingHistory) : [];
+      
+      // Add new expense
+      history.push(newExpense);
+      
+      // Save back to storage
+      await AsyncStorage.setItem('expenseHistory', JSON.stringify(history));
+  
+      Toast.show({
+        type: 'success',
+        text1: 'Expense Added',
+        text2: 'Recipe cost added to expense history',
+      });
+    } catch (error) {
+      console.error('Failed to add expense:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to add expense to history',
+      });
+    }
   };
 
   if (!fontsLoaded) return null;
@@ -464,6 +528,7 @@ const HomeScreen = () => {
                       styles.foodItemContainer,
                       isExpanded && styles.foodItemExpanded,
                       selectedRecipes.includes(r.id) && styles.selectedItem,
+                      menuVisibleId === r.id && { zIndex: 999 },
                     ]}
                   >
                       <TouchableOpacity
@@ -530,23 +595,36 @@ const HomeScreen = () => {
                       style={styles.menuButton}
                       onPress={(e) => {
                         e.stopPropagation();
-                        toggleMenu(r.id);
+                        // Get the button position
+                        (e.currentTarget as any).measureInWindow((x: number, y: number) => {
+                          const screenHeight = Dimensions.get('window').height;
+                          const spaceBelow = screenHeight - y - 150; // 150 = menu height estimate
+                          setMenuPosition(spaceBelow > 200 ? 'bottom' : 'top');
+                          toggleMenu(r.id);
+                        });
                       }}
                     >
-                      <Icon name="more-vert" size={24} color="#555" />
+                    <Icon name="more-vert" size={24} color="#555" />
                     </TouchableOpacity>
 
                     {menuVisibleId === r.id && (
                       <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
-                        <View style={styles.menuDropdown}>
-                          <TouchableOpacity
+                        <View style={[
+                          styles.menuDropdown,
+                          { 
+                            top: menuPosition === 'bottom' ? 36 : undefined,
+                            bottom: menuPosition === 'top' ? 36 : undefined,
+                          }
+                        ]}>
+                        <TouchableOpacity
                             style={styles.menuItem}
                             onPress={(e) => {
                               e.stopPropagation();
                               setEditedTitle(r.title);
                               setEditedIngredients(r.ingredients);
                               setEditedInstructions(r.instructions);
-                              setEditedCost(r.cost?.toString() || "");
+                              // Initialize with calculated cost
+                              setEditedCost(parseCostFromIngredients(r.ingredients).toFixed(2));
                               setEditingRecipe(r);
                               setMenuVisibleId(null);
                             }}
@@ -573,6 +651,22 @@ const HomeScreen = () => {
                               style={styles.menuIcon}
                             />
                             <Text style={styles.menuText}>Delete</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.menuItem}
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              handleAddToExpenses(r);
+                              setMenuVisibleId(null);
+                            }}
+                          >
+                            <FontAwesome6Icon
+                              name="peso-sign"
+                              size={18}
+                              color="#2ECC71"
+                              style={styles.menuIcon}
+                            />
+                            <Text style={styles.menuText}>Add to Expenses</Text>
                           </TouchableOpacity>
                         </View>
                       </TouchableWithoutFeedback>
@@ -626,7 +720,12 @@ const HomeScreen = () => {
                         style={[styles.textInput, styles.messageInput]}
                         multiline
                         value={editedIngredients}
-                        onChangeText={setEditedIngredients}
+                        onChangeText={(text) => {
+                          setEditedIngredients(text);
+                          // Automatically calculate cost when ingredients change
+                          const totalCost = parseCostFromIngredients(text);
+                          setEditedCost(totalCost.toFixed(2));
+                        }}
                         placeholder="Enter ingredients (one per line)..."
                         placeholderTextColor="#7F8C8D"
                       />
@@ -641,12 +740,14 @@ const HomeScreen = () => {
                         placeholderTextColor="#7F8C8D"
                       />
 
-                      <Text style={styles.inputLabel}>Cost (optional)</Text>
+                      <Text style={styles.inputLabel}>
+                        Total Cost (auto-calculated) {editedCost && `₱${editedCost}`}
+                      </Text>
                       <TextInput
                         style={styles.textInput}
                         value={editedCost}
                         onChangeText={setEditedCost}
-                        placeholder="Enter estimated cost..."
+                        placeholder="Or enter custom total..."
                         placeholderTextColor="#7F8C8D"
                         keyboardType="numeric"
                       />
@@ -816,6 +917,7 @@ const styles = StyleSheet.create({
     elevation: 5,
     overflow: "visible",
     position: "relative",
+    zIndex: 1, 
   },
   foodItemTouchable: {
     padding: 12,
@@ -1081,7 +1183,6 @@ const styles = StyleSheet.create({
   },
   menuDropdown: {
     position: "absolute",
-    top: 36,
     right: 8,
     backgroundColor: "white",
     borderRadius: 8,
@@ -1102,6 +1203,8 @@ const styles = StyleSheet.create({
   },
   menuIcon: {
     marginRight: 8,
+    width: 20,
+    textAlign: 'center',
   },
   menuText: {
     fontSize: 14,
@@ -1193,8 +1296,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
   },
+<<<<<<< HEAD
   pressedButton: {
     opacity: 0.5,
+=======
+  menuDropdownTop: {
+    shadowOffset: { width: 0, height: -2 }, // Reverse shadow direction
+  },
+  menuDropdownBottom: {
+    shadowOffset: { width: 0, height: 2 },
+>>>>>>> c07fac16838f279a42e35e6b16c0883067079797
   },
 });
 

@@ -46,7 +46,11 @@ export default function NewPasswordScreen() {
     setLoading(true);
     try {
       const res = await fetch(
+<<<<<<< HEAD
         "http://192.168.1.7:8000/auth/users/reset_password_confirm/",
+=======
+        "http://192.168.100.10:8000/auth/users/reset_password_confirm/",
+>>>>>>> c07fac16838f279a42e35e6b16c0883067079797
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

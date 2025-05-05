@@ -524,7 +524,11 @@ const clearChat = () => {
         }
         
         const response = await fetch(
+<<<<<<< HEAD
           "http://192.168.1.7:8000/api/query-ollama/",
+=======
+          "http://192.168.100.10:8000/api/query-ollama/",
+>>>>>>> c07fac16838f279a42e35e6b16c0883067079797
           {
             method: "POST",
             headers: {
@@ -581,6 +585,7 @@ const clearChat = () => {
       const token = await AsyncStorage.getItem("authToken");
       if (!token) throw new Error("Not authenticated");
   
+<<<<<<< HEAD
       // Create clean recipe object with only the fields we want
       const cleanRecipe = {
         title: recipeData.title,
@@ -590,6 +595,9 @@ const clearChat = () => {
       };
   
       const response = await fetch("http://192.168.1.7:8000/api/save-recipe/", {
+=======
+      const response = await fetch("http://192.168.100.10:8000/api/save-recipe/", {
+>>>>>>> c07fac16838f279a42e35e6b16c0883067079797
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -728,7 +736,10 @@ function parseRecipes(responseText: string): Array<{
         });
       }
     }
+<<<<<<< HEAD
 
+=======
+>>>>>>> c07fac16838f279a42e35e6b16c0883067079797
     return recipes;
   } catch (error) {
     console.error("Error parsing recipes:", error);

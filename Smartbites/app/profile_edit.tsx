@@ -227,7 +227,11 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
       }
 
       const response = await fetch(
+<<<<<<< HEAD
         "http://192.168.1.7:8000/api/update-profile/",
+=======
+        "http://192.168.100.10:8000/api/update-profile/",
+>>>>>>> c07fac16838f279a42e35e6b16c0883067079797
         {
           method: "PATCH",
           headers: {
@@ -306,7 +310,11 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
       }
   
       const response = await fetch(
+<<<<<<< HEAD
         "http://192.168.1.7:8000/api/change-password/",
+=======
+        "http://192.168.100.10:8000/api/change-password/",
+>>>>>>> c07fac16838f279a42e35e6b16c0883067079797
         {
           method: "POST",
           headers: {
@@ -328,7 +336,11 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
           text2: "Please login with your new password",
         });
   
+<<<<<<< HEAD
         await fetch("http://192.168.1.7:8000/api/logout/", {
+=======
+        await fetch("http://192.168.100.10:8000/api/logout/", {
+>>>>>>> c07fac16838f279a42e35e6b16c0883067079797
           method: "POST",
           headers: {
             "Content-Type": "application/json",

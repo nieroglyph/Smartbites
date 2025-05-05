@@ -26,6 +26,7 @@ import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import useUserProfile from "./hooks/useUserProfile";
 import { GestureHandlerRootView, Swipeable } from "react-native-gesture-handler";
+import { useFocusEffect } from '@react-navigation/native';
 
 type RootStackParamList = {
   Home: undefined;
@@ -129,6 +130,20 @@ const BudgetScreen = () => {
         </Swipeable>
       );
     }
+  );
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const loadHistory = async () => {
+        try {
+          const json = await AsyncStorage.getItem("expenseHistory");
+          if (json) setHistory(JSON.parse(json));
+        } catch (err) {
+          console.error("Failed to load history", err);
+        }
+      };
+      loadHistory();
+    }, [])
   );
 
   useEffect(() => {
