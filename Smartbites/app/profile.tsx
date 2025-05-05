@@ -224,12 +224,7 @@ const ProfileScreen = () => {
     try {
       const token = await AsyncStorage.getItem("authToken");
       if (!token) return;
-
-<<<<<<< HEAD
-      await fetch("http://192.168.1.7:8000/api/logout/", {
-=======
-      await fetch("http://192.168.100.10:8000/api/logout/", {
->>>>>>> c07fac16838f279a42e35e6b16c0883067079797
+      await fetch("http://192.168.254.193:8000/api/logout/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -523,12 +523,7 @@ const clearChat = () => {
           return false;
         }
         
-        const response = await fetch(
-<<<<<<< HEAD
-          "http://192.168.1.7:8000/api/query-ollama/",
-=======
-          "http://192.168.100.10:8000/api/query-ollama/",
->>>>>>> c07fac16838f279a42e35e6b16c0883067079797
+        const response = await fetch("http://192.168.254.193:8000/api/query-ollama/",
           {
             method: "POST",
             headers: {
@@ -585,25 +580,13 @@ const clearChat = () => {
       const token = await AsyncStorage.getItem("authToken");
       if (!token) throw new Error("Not authenticated");
   
-<<<<<<< HEAD
-      // Create clean recipe object with only the fields we want
-      const cleanRecipe = {
-        title: recipeData.title,
-        ingredients: recipeData.ingredients,
-        instructions: recipeData.instructions,
-        cost: recipeData.cost || null
-      };
-  
-      const response = await fetch("http://192.168.1.7:8000/api/save-recipe/", {
-=======
       const response = await fetch("http://192.168.100.10:8000/api/save-recipe/", {
->>>>>>> c07fac16838f279a42e35e6b16c0883067079797
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Token ${token}`,
         },
-        body: JSON.stringify(cleanRecipe),
+        body: JSON.stringify(recipeData),
       });
   
       if (!response.ok) {
@@ -618,134 +601,125 @@ const clearChat = () => {
     }
   };
 
-function parseRecipes(responseText: string): Array<{
-  title: string;
-  ingredients: string;
-  instructions: string;
-  cost: number | null;
-}> {
-  try {
+  function parseRecipes(responseText: string): Array<{
+    title: string;
+    ingredients: string;
+    instructions: string;
+    cost: number | null;
+  }> {
     const recipes: Array<{
       title: string;
       ingredients: string;
       instructions: string;
       cost: number | null;
     }> = [];
-
-    // Normalize line endings and remove excessive whitespace
+  
     const normalizedText = responseText
-      .replace(/\r\n/g, '\n')  // Standardize line endings
-      .replace(/\n+/g, '\n')   // Remove extra newlines
-      .replace(/\*\*([^*]+)\*\*/g, '$1')  // Remove bold formatting
-      .trim();
-
-    // First try to split by numbered recipes
-    const recipeSections = normalizedText.split(/(?=\d+\.\s*(?:title|recipe):?)|(?=recipe\s*\d+:)/i);
-    
-    if (recipeSections.length > 1) {
-      for (const section of recipeSections) {
-        if (!section.trim()) continue;
-        
-        // Extract title (handle both "1. Title:" and "Recipe 1:" formats)
-        let title = section.split('\n')[0]
-          .replace(/^\d+\.\s*(?:title|recipe):?\s*/i, '')
-          .replace(/^recipe\s*\d+:?\s*/i, '')
-          .trim();
-        
-        if (!title) title = "Untitled Recipe";
-
-        // Extract the rest of the recipe content
-        const recipeContent = section.includes('\n') 
-          ? section.substring(section.indexOf('\n')).trim()
-          : '';
-
-        // Extract ingredients
-        let ingredients = "";
-        const ingredientsMatch = recipeContent.match(/ingredients?:([\s\S]+?)(?=instructions?:|total:|price:|₱|$)/i);
-        if (ingredientsMatch) {
-          ingredients = ingredientsMatch[1]
-            .replace(/^\s*:\s*/, '')  // Remove potential colon after "Ingredients"
-            .trim();
-        }
-
-        // Extract instructions
-        let instructions = "";
-        const instructionsMatch = recipeContent.match(/instructions?:([\s\S]+?)(?=total:|price:|₱|$)/i);
-        if (instructionsMatch) {
-          instructions = instructionsMatch[1]
-            .replace(/^\s*:\s*/, '')  // Remove potential colon after "Instructions"
-            .trim();
-        }
-
-        // Extract cost - improved to handle different formats
-        let cost: number | null = null;
-        const costMatch = recipeContent.match(/(?:total|price|estimated cost|cost):?\s*₱?\s*([\d,\.]+)/i);
-        if (costMatch) {
-          cost = parseFloat(costMatch[1].replace(/,/g, ""));
-        } else {
-          // Fallback: look for ₱ symbol anywhere in the recipe
-          const fallbackCostMatch = recipeContent.match(/₱\s*([\d,\.]+)/i);
-          if (fallbackCostMatch) {
-            cost = parseFloat(fallbackCostMatch[1].replace(/,/g, ""));
-          }
-        }
-
-        // Only add if we have valid content
-        if (ingredients || instructions) {
-          recipes.push({
-            title: title || "Untitled Recipe",
-            ingredients: ingredients || "No ingredients listed",
-            instructions: instructions || "No instructions provided",
-            cost,
-          });
-        }
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/^\*\s+/gm, '• ');
+  
+    const recipeDelimiters = [
+      /\*\*Recipe \d+\*\*/g,
+      /\n##\s/g,
+      /\n\n\n/g,
+      /\n\*\*\d+\.\*\*\s/g,
+    ];
+  
+    let recipeSections: string[] = [];
+    let delimiterUsed = null;
+  
+    for (const delimiter of recipeDelimiters) {
+      const sections = normalizedText.split(delimiter).filter((s) => s.trim());
+      if (sections.length > 1) {
+        recipeSections = sections;
+        delimiterUsed = delimiter;
+        break;
       }
-    } else {
-      // Fall back to single recipe parsing
-      const titleMatch = normalizedText.match(/(?:title|name):\s*(.+?)(?=\n|$)/i);
-      const title = titleMatch ? titleMatch[1].trim() : "Untitled Recipe";
-
-      const ingredientsMatch = normalizedText.match(/ingredients?:([\s\S]+?)(?=instructions?:|total:|price:|₱|$)/i);
-      const ingredients = ingredientsMatch ? 
-        ingredientsMatch[1].replace(/^\s*:\s*/, '').trim() : 
-        "No ingredients listed";
-
-      const instructionsMatch = normalizedText.match(/instructions?:([\s\S]+?)(?=total:|price:|₱|$)/i);
-      const instructions = instructionsMatch ? 
-        instructionsMatch[1].replace(/^\s*:\s*/, '').trim() : 
-        "No instructions provided";
-
+    }
+  
+    if (recipeSections.length <= 1) {
+      const titleMatches = [
+        ...normalizedText.matchAll(/Title:\s*(.+?)\n/g),
+      ];
+      if (titleMatches.length > 1) {
+        recipeSections = [];
+        let lastIndex = 0;
+        titleMatches.forEach((match, index) => {
+          if (index > 0) {
+            recipeSections.push(normalizedText.substring(lastIndex, match.index));
+          }
+          lastIndex = match.index || 0;
+        });
+        recipeSections.push(normalizedText.substring(lastIndex));
+      }
+    }
+  
+    if (recipeSections.length <= 1) {
+      recipeSections = [normalizedText];
+    }
+  
+    for (const section of recipeSections) {
+      let title = "Untitled Recipe";
+      let ingredients = "";
+      let instructions = "";
       let cost: number | null = null;
-      const costMatch = normalizedText.match(/(?:total|price|estimated cost|cost):?\s*₱?\s*([\d,\.]+)/i);
+  
+      const titleMatch =
+        section.match(/Title:\s*(.+)/i) ||
+        section.match(/(.+?)\n/i) ||
+        section.match(/^#\s*(.+)/i);
+      if (titleMatch) {
+        title = titleMatch[1].trim();
+      }
+  
+      const ingredientsMatch = section.match(
+        /Ingredients:\s*([\s\S]+?)(?:Instructions:|Total|\n\n|$)/i
+      );
+      if (ingredientsMatch) {
+        ingredients = ingredientsMatch[1].trim();
+      } else if (section.includes("Ingredients:")) {
+        const ingredientsIndex = section.indexOf("Ingredients:");
+        const endIndex =
+          section.indexOf("Instructions:", ingredientsIndex) || section.length;
+        ingredients = section
+          .substring(ingredientsIndex + "Ingredients:".length, endIndex)
+          .trim();
+      }
+  
+      const instructionsMatch = section.match(
+        /Instructions:\s*([\s\S]+?)(?:Total|\n\n|$)/i
+      );
+      if (instructionsMatch) {
+        instructions = instructionsMatch[1].trim();
+      } else if (section.includes("Instructions:")) {
+        const instructionsIndex = section.indexOf("Instructions:");
+        instructions = section
+          .substring(instructionsIndex + "Instructions:".length)
+          .trim();
+      }
+  
+      const costMatch = section.match(
+        /Total Estimated Price:\s*₱([\d,\.]+)/i
+      );
       if (costMatch) {
         cost = parseFloat(costMatch[1].replace(/,/g, ""));
-      } else {
-        // Fallback: look for ₱ symbol anywhere in the recipe
-        const fallbackCostMatch = normalizedText.match(/₱\s*([\d,\.]+)/i);
-        if (fallbackCostMatch) {
-          cost = parseFloat(fallbackCostMatch[1].replace(/,/g, ""));
-        }
       }
-
-      if (ingredients || instructions) {
+  
+      if (
+        (ingredients || instructions) &&
+        !section.includes("Here are") &&
+        !section.includes("I found")
+      ) {
         recipes.push({
-          title,
-          ingredients,
-          instructions,
+          title: title || "Untitled Recipe",
+          ingredients: ingredients || "No ingredients listed",
+          instructions: instructions || "No instructions provided",
           cost,
         });
       }
     }
-<<<<<<< HEAD
-
-=======
->>>>>>> c07fac16838f279a42e35e6b16c0883067079797
     return recipes;
-  } catch (error) {
-    console.error("Error parsing recipes:", error);
-    return [];
   }
-}
   
   const handleSaveRecipe = async (recipeMsg: Message) => {
     try {
@@ -791,7 +765,7 @@ function parseRecipes(responseText: string): Array<{
             throw new Error(`Recipe "${cleanRecipe.title}" is missing required fields`);
           }
   
-          const response = await fetch("http://192.168.1.7:8000/api/save-recipe/", {
+          const response = await fetch("http://192.168.254.193:8000/api/save-recipe/", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

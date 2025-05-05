@@ -212,12 +212,7 @@ const HomeScreen = () => {
     }
 
     try {
-      const res = await fetch(
-<<<<<<< HEAD
-        `http://192.168.1.7:8000/api/update-recipe/${editingRecipe.id}/`,
-=======
-        `http://192.168.100.10:8000/api/update-recipe/${editingRecipe.id}/`,
->>>>>>> c07fac16838f279a42e35e6b16c0883067079797
+      const res = await fetch(`http://192.168.254.193:8000/api/update-recipe/${editingRecipe.id}/`,
         {
           method: "PUT",
           headers: {
@@ -269,24 +264,14 @@ const HomeScreen = () => {
         if (!token) throw new Error("Not authenticated");
 
         if (ids.length === 1) {
-          await fetch(
-<<<<<<< HEAD
-            `http://192.168.1.7:8000/api/delete-recipe/${ids[0]}/`,
-=======
-            `http://192.168.100.10:8000/api/delete-recipe/${ids[0]}/`,
->>>>>>> c07fac16838f279a42e35e6b16c0883067079797
+          await fetch( `http://192.168.254.193:8000/api/delete-recipe/${ids[0]}/`,
             {
               method: "DELETE",
               headers: { Authorization: `Token ${token}` },
             }
           );
         } else {
-          await fetch(
-<<<<<<< HEAD
-            "http://192.168.1.7:8000/api/delete-multiple-recipes/",
-=======
-            "http://192.168.100.10:8000/api/delete-multiple-recipes/",
->>>>>>> c07fac16838f279a42e35e6b16c0883067079797
+          await fetch( "http://192.168.254.193:8000/api/delete-multiple-recipes/",
             {
               method: "POST",
               headers: {
@@ -1296,16 +1281,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
   },
-<<<<<<< HEAD
   pressedButton: {
     opacity: 0.5,
-=======
+  },
   menuDropdownTop: {
     shadowOffset: { width: 0, height: -2 }, // Reverse shadow direction
-  },
-  menuDropdownBottom: {
-    shadowOffset: { width: 0, height: 2 },
->>>>>>> c07fac16838f279a42e35e6b16c0883067079797
   },
 });
 
