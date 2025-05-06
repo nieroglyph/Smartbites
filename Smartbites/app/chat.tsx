@@ -722,73 +722,51 @@ const clearChat = () => {
   }
   
   const handleSaveRecipe = async (recipeMsg: Message) => {
+    const recipes = parseRecipes(recipeMsg.text);
+    
+    if (recipes.length === 0) {
+      Alert.alert("Error", "No valid recipe found to save");
+      return;
+    }
+  
+    let successCount = 0;
+    let duplicateCount = 0;
+    let errorCount = 0;
+    const errorMessages: string[] = [];
+  
     try {
-      const recipes = parseRecipes(recipeMsg.text);
-      
-      if (recipes.length === 0) {
-        Toast.show({
-          type: "error",
-          text1: "No Recipe Found",
-          text2: "Couldn't find any valid recipes to save.",
-        });
-        return;
-      }
-  
-      const token = await AsyncStorage.getItem("authToken");
-      if (!token) {
-        Toast.show({
-          type: "error",
-          text1: "Authentication Error",
-          text2: "Please login to save recipes.",
-        });
-        return;
-      }
-  
-      let successCount = 0;
-      let duplicateCount = 0;
-      let errorCount = 0;
-      const errorMessages: string[] = [];
-  
-      // Save recipes sequentially to better track errors
-      for (const recipe of recipes) {
+      if (recipes.length === 1) {
+        const { title, ingredients, instructions, cost } = recipes[0];
         try {
-          // Clean up the recipe data before saving
-          const cleanRecipe = {
-            title: recipe.title.trim(),
-            ingredients: recipe.ingredients.trim(),
-            instructions: recipe.instructions.trim(),
-            cost: recipe.cost || null
-          };
-  
-          // Validate required fields
-          if (!cleanRecipe.title || !cleanRecipe.ingredients || !cleanRecipe.instructions) {
-            throw new Error(`Recipe "${cleanRecipe.title}" is missing required fields`);
+          const result = await saveRecipe({ title, ingredients, instructions, cost });
+          if (result) successCount++;
+        } catch (error: unknown) {
+          if (error instanceof Error && error.message.includes("already exists")) {
+            duplicateCount++;
+          } else {
+            errorCount++;
+            errorMessages.push(error instanceof Error ? error.message : "Unknown error");
           }
-  
-          const response = await fetch("http://192.168.254.193:8000/api/save-recipe/", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Token ${token}`,
-            },
-            body: JSON.stringify(cleanRecipe),
-          });
-  
-          if (!response.ok) {
-            const errorData = await response.json();
-            if (errorData.error && errorData.error.includes("already exists")) {
+        }
+      } 
+      // For multiple recipes
+      else {
+        const savePromises = recipes.map(async (recipe) => {
+          const { title, ingredients, instructions, cost } = recipe;
+          try {
+            await saveRecipe({ title, ingredients, instructions, cost });
+            successCount++;
+          } catch (error: unknown) {
+            if (error instanceof Error && error.message.includes("already exists")) {
               duplicateCount++;
             } else {
-              throw new Error(errorData.message || errorData.error || "Failed to save recipe");
+              errorCount++;
+              errorMessages.push(error instanceof Error ? error.message : "Unknown error");
             }
-          } else {
-            successCount++;
           }
-        } catch (error: any) {
-          errorCount++;
-          errorMessages.push(error.message || "Unknown error");
-          console.error("Error saving recipe:", error);
-        }
+        });
+  
+        await Promise.all(savePromises);
       }
   
       // Show consolidated results

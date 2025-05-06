@@ -3,7 +3,11 @@
     "name": "Smartbites",
     "slug": "Smartbites",
     "scheme": "smartbites",
-    "platforms": ["ios", "android", "web"],
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -18,15 +22,17 @@
     },
     "android": {
       "permissions": [
-        "CAMERA"
+        "CAMERA",
+        "android.permission.CAMERA"
       ],
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/images/logo/smartbites-high-resolution-logo-transparent.png",
+        "backgroundColor": "#FE7F2D"
       },
       "compileSdkVersion": 33,
       "targetSdkVersion": 33,
-      "buildToolsVersion": "33.0.0"
+      "buildToolsVersion": "33.0.0",
+      "package": "com.dreamteam.Smartbites"
     },
     "web": {
       "bundler": "metro",
@@ -38,7 +44,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/logo/smartbites-high-resolution-logo.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
@@ -62,6 +68,15 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "fbbfec4f-d896-44a2-b5c0-2f0725b7cb61"
+      }
+    },
+    "owner": "exoduszero"
   }
 }
