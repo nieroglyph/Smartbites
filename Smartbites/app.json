@@ -23,18 +23,29 @@
     "android": {
       "permissions": [
         "CAMERA",
+<<<<<<< HEAD
         "android.permission.CAMERA",
         "CAMERA",
         "android.permission.CAMERA"
       ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/logo/adaptive-icon.png",
+=======
+        "android.permission.CAMERA"
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/logo/smartbites-high-resolution-logo-transparent.png",
+>>>>>>> 84bd83414d05e2d36844a6e0438eb4a053679cc3
         "backgroundColor": "#FE7F2D"
       },
       "compileSdkVersion": 33,
       "targetSdkVersion": 33,
       "buildToolsVersion": "33.0.0",
+<<<<<<< HEAD
       "package": "com.anonymous.Smartbites"
+=======
+      "package": "com.dreamteam.Smartbites"
+>>>>>>> 84bd83414d05e2d36844a6e0438eb4a053679cc3
     },
     "web": {
       "bundler": "metro",
@@ -46,7 +57,11 @@
       [
         "expo-splash-screen",
         {
+<<<<<<< HEAD
           "image": "./assets/images/logo/adaptive-icon.png",
+=======
+          "image": "./assets/images/logo/smartbites-high-resolution-logo.png",
+>>>>>>> 84bd83414d05e2d36844a6e0438eb4a053679cc3
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#00272B"
@@ -70,6 +85,15 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "fbbfec4f-d896-44a2-b5c0-2f0725b7cb61"
+      }
+    },
+    "owner": "exoduszero"
   }
 }

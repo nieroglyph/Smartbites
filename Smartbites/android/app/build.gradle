@@ -19,6 +19,7 @@ def jscFlavor = 'org.webkit:android-jsc:+'
 
 android {
     ndkVersion rootProject.ext.ndkVersion
+<<<<<<< HEAD
     compileSdk 34  // Updated to 34 (or 35 if needed)
     namespace 'com.anonymous.Smartbites'
 
@@ -29,6 +30,28 @@ android {
         versionCode 1
         versionName "1.0.0"
         resConfigs "en", "xxhdpi"  // Optimize APK by removing unused resources
+=======
+    buildToolsVersion rootProject.ext.buildToolsVersion
+    compileSdk 35
+
+    namespace 'com.dreamteam.Smartbites'
+    defaultConfig {
+        applicationId 'com.dreamteam.Smartbites'
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion 35
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    // Add these new configurations for Java 17
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    
+    kotlinOptions {
+        jvmTarget = '17'
+>>>>>>> 84bd83414d05e2d36844a6e0438eb4a053679cc3
     }
 
     signingConfigs {
@@ -38,26 +61,38 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+<<<<<<< HEAD
         // Add your release signing config here if needed
     }
 
+=======
+    }
+>>>>>>> 84bd83414d05e2d36844a6e0438eb4a053679cc3
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
+<<<<<<< HEAD
             signingConfig signingConfigs.debug  // Replace with release config in production
+=======
+            signingConfig signingConfigs.debug
+>>>>>>> 84bd83414d05e2d36844a6e0438eb4a053679cc3
             shrinkResources (findProperty('android.enableShrinkResourcesInReleaseBuilds')?.toBoolean() ?: false)
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
             crunchPngs (findProperty('android.enablePngCrunchInReleaseBuilds')?.toBoolean() ?: true)
         }
     }
+<<<<<<< HEAD
 
+=======
+>>>>>>> 84bd83414d05e2d36844a6e0438eb4a053679cc3
     packagingOptions {
         jniLibs {
             useLegacyPackaging (findProperty('expo.useLegacyPackaging')?.toBoolean() ?: false)
         }
+<<<<<<< HEAD
         // Fix for duplicate files in dependencies
         pickFirst '**/libjsc.so'
         pickFirst '**/libhermes.so'
@@ -70,13 +105,33 @@ android {
 
     kotlinOptions {
         jvmTarget = '17'
+=======
+    }
+    androidResources {
+        ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~'
+    }
+}
+
+["pickFirsts", "excludes", "merges", "doNotStrip"].each { prop ->
+    def options = (findProperty("android.packagingOptions.$prop") ?: "").split(",");
+    for (i in 0..<options.size()) options[i] = options[i].trim();
+    options -= ""
+    if (options.length > 0) {
+        println "android.packagingOptions.$prop += $options ($options.length)"
+        options.each {
+            android.packagingOptions[prop] += it
+        }
+>>>>>>> 84bd83414d05e2d36844a6e0438eb4a053679cc3
     }
 }
 
 dependencies {
     implementation("com.facebook.react:react-android")
 
+<<<<<<< HEAD
     // Fresco for image loading (adjust based on expo.gif/webp settings)
+=======
+>>>>>>> 84bd83414d05e2d36844a6e0438eb4a053679cc3
     def isGifEnabled = (findProperty('expo.gif.enabled') ?: "") == "true";
     def isWebpEnabled = (findProperty('expo.webp.enabled') ?: "") == "true";
     def isWebpAnimatedEnabled = (findProperty('expo.webp.animated') ?: "") == "true";
@@ -90,17 +145,23 @@ dependencies {
             implementation("com.facebook.fresco:animated-webp:${reactAndroidLibs.versions.fresco.get()}")
         }
     }
+<<<<<<< HEAD
 
     // Hermes or JSC
     def hermesEnabled = (findProperty('expo.jsEngine') ?: "hermes") == "hermes"
+=======
+>>>>>>> 84bd83414d05e2d36844a6e0438eb4a053679cc3
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
     } else {
         implementation jscFlavor
     }
+<<<<<<< HEAD
 
     // Expo modules (auto-linked)
     implementation project(':expo')
     implementation project(':expo-application')
     implementation project(':expo-constants')
+=======
+>>>>>>> 84bd83414d05e2d36844a6e0438eb4a053679cc3
 }

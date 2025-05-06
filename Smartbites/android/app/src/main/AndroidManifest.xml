@@ -29,7 +29,12 @@
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="smartbites"/>
+<<<<<<< HEAD
         <data android:scheme="com.anonymous.Smartbites"/>
+=======
+        <data android:scheme="com.dreamteam.Smartbites"/>
+        <data android:scheme="exp+smartbites"/>
+>>>>>>> 84bd83414d05e2d36844a6e0438eb4a053679cc3
       </intent-filter>
     </activity>
   </application>
