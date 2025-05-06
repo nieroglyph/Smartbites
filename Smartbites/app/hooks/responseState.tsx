@@ -9,6 +9,7 @@ class ResponseState {
   private _thinkingMessageId: number | null = null;
   private _isResponding: boolean = false;
   public readonly messageUpdated = new Subject<MessageUpdate>();
+  abortController: any;
 
   get responseInterval(): NodeJS.Timeout | null {
     return this._responseInterval;

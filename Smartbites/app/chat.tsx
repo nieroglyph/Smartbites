@@ -143,6 +143,23 @@ const ThinkingDots = () => {
   );
 };
 
+const hasRecipeComponents = (text: string): boolean => {
+  const normalizedText = text.toLowerCase();
+  
+  // Check for multiple recipes (look for numbered recipes like "1.", "2.", "Recipe 1:", etc.)
+  const hasNumberedRecipes = /(\d+\.\s*(?:title|recipe):|recipe\s*\d+:)/i.test(normalizedText);
+  
+  // Check for single recipe format
+  const hasSingleRecipe = (
+    normalizedText.includes("title:") &&
+    (normalizedText.includes("ingredients:") || normalizedText.includes("ingredient:")) &&
+    (normalizedText.includes("instructions:") || normalizedText.includes("instruction:")) &&
+    (normalizedText.includes("total:") || normalizedText.includes("price:"))
+  );
+
+  return hasNumberedRecipes || hasSingleRecipe;
+};
+
 const ChatScreen = () => {
   const router = useRouter();
   const isFocused = useIsFocused();
@@ -284,35 +301,65 @@ const ChatScreen = () => {
     };
   }, []);
 
-  const clearChat = () => {
-    Alert.alert(
-      "Clear Chat",
-      "Are you sure you want to clear all messages?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel"
-        },
-        { 
-          text: "Clear", 
-          onPress: async () => {
-            globalResponseState.stopResponseAnimation();
-            globalResponseState.resetResponseState();
-            
-            setIsAIResponding(false);
-            const newMessages = [{
-              id: 1,
-              text: "Hello! I'm your SmartBites assistant. How can I help you today?",
-              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              isUser: false
-            }];
-            setMessages(newMessages);
-            await AsyncStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(newMessages));
-          }
-        }
-      ]
-    );
+  const handleCancelResponse = () => {
+    if (globalResponseState.isResponding) {
+      globalResponseState.stopResponseAnimation();
+      globalResponseState.resetResponseState();
+      setIsAIResponding(false);
+      
+      // Remove the thinking message if it exists
+      setMessages(prev => prev.filter(msg => msg.text !== "###THINKING_ANIMATION###"));
+    }
   };
+
+// Update the clearChat function
+const clearChat = () => {
+  Alert.alert(
+    "Clear Chat",
+    "Are you sure you want to clear all messages? This will also clear the cache.",
+    [
+      {
+        text: "Cancel",
+        style: "cancel"
+      },
+      { 
+        text: "Clear", 
+        onPress: async () => {
+          globalResponseState.stopResponseAnimation();
+          globalResponseState.resetResponseState();
+          
+          globalResponseState.isResponding = false;
+          globalResponseState.fullResponse = "";
+          globalResponseState.currentIndex = 0;
+          globalResponseState.thinkingMessageId = null;
+          setIsAIResponding(false);
+          
+          const newMessages = [{
+            id: 1,
+            text: "Hello! I'm your SmartBites assistant. How can I help you today?",
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            isUser: false
+          }];
+          setMessages(newMessages);
+          
+          await AsyncStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(newMessages));
+          
+          globalResponseState.messageUpdated.next({ id: 0, text: "" });
+          
+          setPhotoPreview(null);
+          setMessage("");
+          setInputHeight(16);
+          
+          Toast.show({
+            type: "success",
+            text1: "Chat Cleared",
+            text2: "All messages have been cleared.",
+          });
+        }
+      }
+    ]
+  );
+};
 
   useEffect(() => {
     (async () => {
@@ -476,8 +523,7 @@ const ChatScreen = () => {
           return false;
         }
         
-        const response = await fetch(
-          "http://192.168.100.10:8000/api/query-ollama/",
+        const response = await fetch("http://192.168.254.193:8000/api/query-ollama/",
           {
             method: "POST",
             headers: {
@@ -676,82 +722,108 @@ const ChatScreen = () => {
   }
   
   const handleSaveRecipe = async (recipeMsg: Message) => {
-    const recipes = parseRecipes(recipeMsg.text);
-    
-    if (recipes.length === 0) {
-      Alert.alert("Error", "No valid recipe found to save");
-      return;
-    }
-  
-    let successCount = 0;
-    let duplicateCount = 0;
-    let errorCount = 0;
-    const errorMessages: string[] = [];
-  
     try {
-      if (recipes.length === 1) {
-        const { title, ingredients, instructions, cost } = recipes[0];
-        try {
-          const result = await saveRecipe({ title, ingredients, instructions, cost });
-          if (result) successCount++;
-        } catch (error: unknown) {
-          if (error instanceof Error && error.message.includes("already exists")) {
-            duplicateCount++;
-          } else {
-            errorCount++;
-            errorMessages.push(error instanceof Error ? error.message : "Unknown error");
-          }
-        }
-      } 
-      // For multiple recipes
-      else {
-        const savePromises = recipes.map(async (recipe) => {
-          const { title, ingredients, instructions, cost } = recipe;
-          try {
-            await saveRecipe({ title, ingredients, instructions, cost });
-            successCount++;
-          } catch (error: unknown) {
-            if (error instanceof Error && error.message.includes("already exists")) {
-              duplicateCount++;
-            } else {
-              errorCount++;
-              errorMessages.push(error instanceof Error ? error.message : "Unknown error");
-            }
-          }
-        });
-  
-        await Promise.all(savePromises);
-      }
-  
-      // Show consolidated alert
-      const messageParts = [];
-      if (successCount > 0) messageParts.push(`✓ Saved ${successCount} new recipes`);
-      if (duplicateCount > 0) messageParts.push(`↻ ${duplicateCount} duplicates skipped`);
-      if (errorCount > 0) messageParts.push(`✗ ${errorCount} errors occurred`);
+      const recipes = parseRecipes(recipeMsg.text);
       
-      if (messageParts.length > 0) {
-        let toastMessage = messageParts.join("\n");
-        
-        if (errorMessages.length > 0) {
-          toastMessage += `\n\nErrors:\n${errorMessages.slice(0, 3).join("\n")}`;
-          if (errorMessages.length > 3) toastMessage += `\n...and ${errorMessages.length - 3} more`;
-        }
-      
-        Toast.show({
-          type: "success",
-          text1: "Save Complete",
-          text2: toastMessage,
-        });
-      }
-      
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      if (recipes.length === 0) {
         Toast.show({
           type: "error",
-          text1: "Save Failed",
-          text2: `Failed to save recipes: ${errorMessage}`,
+          text1: "No Recipe Found",
+          text2: "Couldn't find any valid recipes to save.",
         });
+        return;
       }
+  
+      const token = await AsyncStorage.getItem("authToken");
+      if (!token) {
+        Toast.show({
+          type: "error",
+          text1: "Authentication Error",
+          text2: "Please login to save recipes.",
+        });
+        return;
+      }
+  
+      let successCount = 0;
+      let duplicateCount = 0;
+      let errorCount = 0;
+      const errorMessages: string[] = [];
+  
+      // Save recipes sequentially to better track errors
+      for (const recipe of recipes) {
+        try {
+          // Clean up the recipe data before saving
+          const cleanRecipe = {
+            title: recipe.title.trim(),
+            ingredients: recipe.ingredients.trim(),
+            instructions: recipe.instructions.trim(),
+            cost: recipe.cost || null
+          };
+  
+          // Validate required fields
+          if (!cleanRecipe.title || !cleanRecipe.ingredients || !cleanRecipe.instructions) {
+            throw new Error(`Recipe "${cleanRecipe.title}" is missing required fields`);
+          }
+  
+          const response = await fetch("http://192.168.254.193:8000/api/save-recipe/", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Token ${token}`,
+            },
+            body: JSON.stringify(cleanRecipe),
+          });
+  
+          if (!response.ok) {
+            const errorData = await response.json();
+            if (errorData.error && errorData.error.includes("already exists")) {
+              duplicateCount++;
+            } else {
+              throw new Error(errorData.message || errorData.error || "Failed to save recipe");
+            }
+          } else {
+            successCount++;
+          }
+        } catch (error: any) {
+          errorCount++;
+          errorMessages.push(error.message || "Unknown error");
+          console.error("Error saving recipe:", error);
+        }
+      }
+  
+      // Show consolidated results
+      const messageParts = [];
+      if (successCount > 0) messageParts.push(`✓ Saved ${successCount} recipes`);
+      if (duplicateCount > 0) messageParts.push(`↻ ${duplicateCount} duplicates skipped`);
+      if (errorCount > 0) messageParts.push(`✗ ${errorCount} errors occurred`);
+  
+      let toastType: "success" | "error" | "info" = successCount > 0 ? "success" : "error";
+      let toastTitle = successCount > 0 ? "Save Complete" : "Save Issues";
+  
+      if (successCount > 0 && errorCount > 0) {
+        toastType = "info";
+        toastTitle = "Partial Save";
+      }
+  
+      Toast.show({
+        type: toastType,
+        text1: toastTitle,
+        text2: messageParts.join("\n"),
+      });
+  
+      // Log detailed errors for debugging
+      if (errorMessages.length > 0) {
+        console.log("Recipe save errors:", errorMessages);
+      }
+  
+    } catch (error: any) {
+      console.error("Failed to save recipes:", error);
+      Toast.show({
+        type: "error",
+        text1: "Save Failed",
+        text2: error.message || "An unexpected error occurred",
+      });
+    }
   };
 
   const pickImage = async (source: "gallery" | "camera") => {
@@ -1029,31 +1101,30 @@ const ChatScreen = () => {
                     </Text>
                   )}
   
-                    {!msg.isUser &&
-                    !isAIResponding &&
-                    msg.text &&
-                    msg.text.toLowerCase().includes("ingredients") &&
-                    msg.text.toLowerCase().includes("instructions") && (
-                      <View style={styles.recipeActionBar}>
-                        <View style={styles.recipeActionBarLeft}>
-                          <TouchableOpacity
-                            style={styles.saveRecipeInlineButton}
-                            onPress={() => handleSaveRecipe(msg)}
-                            activeOpacity={0.7}
-                          >
-                            <MaterialCommunityIcons
-                              name="bookmark-outline"
-                              size={16}
-                              color="#fff"
-                            />
-                            <Text style={styles.saveRecipeInlineButtonText}>
-                              Save Recipe
-                            </Text>
-                          </TouchableOpacity>
-                        </View>
-                        <Text style={styles.recipeTimeStamp}>{msg.time}</Text>
-                      </View>
-                  )}
+                  {!msg.isUser &&
+                !isAIResponding &&
+                msg.text &&
+                hasRecipeComponents(msg.text) && (
+                  <View style={styles.recipeActionBar}>
+                    <View style={styles.recipeActionBarLeft}>
+                      <TouchableOpacity
+                        style={styles.saveRecipeInlineButton}
+                        onPress={() => handleSaveRecipe(msg)}
+                        activeOpacity={0.7}
+                      >
+                        <MaterialCommunityIcons
+                          name="bookmark-outline"
+                          size={16}
+                          color="#fff"
+                        />
+                        <Text style={styles.saveRecipeInlineButtonText}>
+                          Save Recipe
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                    <Text style={styles.recipeTimeStamp}>{msg.time}</Text>
+                  </View>
+                )}
                 </View>
               </View>
             ))}
@@ -1143,16 +1214,24 @@ const ChatScreen = () => {
             <TouchableOpacity
               style={[
                 styles.sendButton,
-                isAIResponding && styles.disabledButton,
+                isAIResponding && styles.cancelButton,
               ]}
-              onPress={handleSend}
-              disabled={isAIResponding}
+              onPress={isAIResponding ? handleCancelResponse : handleSend}
+              disabled={!message.trim() && !photoPreview && !isAIResponding}
             >
-              <Icon
-                name="send"
-                size={16}
-                color={isAIResponding ? "#ccc" : "#fff"}
-              />
+              {isAIResponding ? (
+                <Icon
+                  name="close"
+                  size={16}
+                  color="#fff"
+                />
+              ) : (
+                <Icon
+                  name="send"
+                  size={16}
+                  color="#fff"
+                />
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -1181,7 +1260,7 @@ const ChatScreen = () => {
                     style={styles.glowIcon}
                   />
                 </View>
-                <Text style={[styles.navText, styles.defaultFont]}>Chat</Text>
+                <Text style={[styles.navText, styles.defaultFont]}>BiteAI</Text>
               </TouchableOpacity>
   
               <TouchableOpacity
@@ -1361,6 +1440,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginLeft: 8,
+  },
+  cancelButton: {
+    backgroundColor: "#FF3B30", // Red color for cancel button
   },
   disabledButton: {
     opacity: 0.5,

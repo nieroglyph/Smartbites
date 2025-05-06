@@ -402,7 +402,7 @@ const BudgetScreen = () => {
                     onPress={() => router.push("/chat")}
                   >
                     <FontAwesome6Icon name="brain" size={24} color="#FE7F2D" />
-                    <Text style={[styles.navText, styles.defaultFont]}>Chat</Text>
+                    <Text style={[styles.navText, styles.defaultFont]}>BiteAI</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
