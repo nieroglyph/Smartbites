@@ -523,7 +523,8 @@ const clearChat = () => {
           return false;
         }
         
-        const response = await fetch("http://192.168.254.193:8000/api/query-ollama/",
+        const response = await fetch(
+          "https://7e24-180-190-253-87.ngrok-free.app/api/query-ollama/",
           {
             method: "POST",
             headers: {
@@ -580,16 +581,19 @@ const clearChat = () => {
       const token = await AsyncStorage.getItem("authToken");
       if (!token) throw new Error("Not authenticated");
   
-      const response = await fetch("http://192.168.100.10:8000/api/save-recipe/", {
+      const response = await fetch("https://7e24-180-190-253-87.ngrok-free.app/api/save-recipe/", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "application/json",      // tell server you’re sending JSON :contentReference[oaicite:0]{index=0}
+          "Accept":       "application/json", 
           Authorization: `Token ${token}`,
         },
         body: JSON.stringify(recipeData),
       });
   
       if (!response.ok) {
+        const text = await response.text();
+        console.log("Raw response:", text);
         const errorData = await response.json();
         throw new Error(errorData.message || errorData.error || "Failed to save recipe");
       }
@@ -722,108 +726,82 @@ const clearChat = () => {
   }
   
   const handleSaveRecipe = async (recipeMsg: Message) => {
+    const recipes = parseRecipes(recipeMsg.text);
+    
+    if (recipes.length === 0) {
+      Alert.alert("Error", "No valid recipe found to save");
+      return;
+    }
+  
+    let successCount = 0;
+    let duplicateCount = 0;
+    let errorCount = 0;
+    const errorMessages: string[] = [];
+  
     try {
-      const recipes = parseRecipes(recipeMsg.text);
-      
-      if (recipes.length === 0) {
-        Toast.show({
-          type: "error",
-          text1: "No Recipe Found",
-          text2: "Couldn't find any valid recipes to save.",
-        });
-        return;
-      }
-  
-      const token = await AsyncStorage.getItem("authToken");
-      if (!token) {
-        Toast.show({
-          type: "error",
-          text1: "Authentication Error",
-          text2: "Please login to save recipes.",
-        });
-        return;
-      }
-  
-      let successCount = 0;
-      let duplicateCount = 0;
-      let errorCount = 0;
-      const errorMessages: string[] = [];
-  
-      // Save recipes sequentially to better track errors
-      for (const recipe of recipes) {
+      if (recipes.length === 1) {
+        const { title, ingredients, instructions, cost } = recipes[0];
         try {
-          // Clean up the recipe data before saving
-          const cleanRecipe = {
-            title: recipe.title.trim(),
-            ingredients: recipe.ingredients.trim(),
-            instructions: recipe.instructions.trim(),
-            cost: recipe.cost || null
-          };
-  
-          // Validate required fields
-          if (!cleanRecipe.title || !cleanRecipe.ingredients || !cleanRecipe.instructions) {
-            throw new Error(`Recipe "${cleanRecipe.title}" is missing required fields`);
+          const result = await saveRecipe({ title, ingredients, instructions, cost });
+          if (result) successCount++;
+        } catch (error: unknown) {
+          if (error instanceof Error && error.message.includes("already exists")) {
+            duplicateCount++;
+          } else {
+            errorCount++;
+            errorMessages.push(error instanceof Error ? error.message : "Unknown error");
           }
-  
-          const response = await fetch("http://192.168.254.193:8000/api/save-recipe/", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Token ${token}`,
-            },
-            body: JSON.stringify(cleanRecipe),
-          });
-  
-          if (!response.ok) {
-            const errorData = await response.json();
-            if (errorData.error && errorData.error.includes("already exists")) {
+        }
+      } 
+      // For multiple recipes
+      else {
+        const savePromises = recipes.map(async (recipe) => {
+          const { title, ingredients, instructions, cost } = recipe;
+          try {
+            await saveRecipe({ title, ingredients, instructions, cost });
+            successCount++;
+          } catch (error: unknown) {
+            if (error instanceof Error && error.message.includes("already exists")) {
               duplicateCount++;
             } else {
-              throw new Error(errorData.message || errorData.error || "Failed to save recipe");
+              errorCount++;
+              errorMessages.push(error instanceof Error ? error.message : "Unknown error");
             }
-          } else {
-            successCount++;
           }
-        } catch (error: any) {
-          errorCount++;
-          errorMessages.push(error.message || "Unknown error");
-          console.error("Error saving recipe:", error);
-        }
+        });
+  
+        await Promise.all(savePromises);
       }
   
-      // Show consolidated results
+      // Show consolidated alert
       const messageParts = [];
-      if (successCount > 0) messageParts.push(`✓ Saved ${successCount} recipes`);
+      if (successCount > 0) messageParts.push(`✓ Saved ${successCount} new recipes`);
       if (duplicateCount > 0) messageParts.push(`↻ ${duplicateCount} duplicates skipped`);
       if (errorCount > 0) messageParts.push(`✗ ${errorCount} errors occurred`);
-  
-      let toastType: "success" | "error" | "info" = successCount > 0 ? "success" : "error";
-      let toastTitle = successCount > 0 ? "Save Complete" : "Save Issues";
-  
-      if (successCount > 0 && errorCount > 0) {
-        toastType = "info";
-        toastTitle = "Partial Save";
+      
+      if (messageParts.length > 0) {
+        let toastMessage = messageParts.join("\n");
+        
+        if (errorMessages.length > 0) {
+          toastMessage += `\n\nErrors:\n${errorMessages.slice(0, 3).join("\n")}`;
+          if (errorMessages.length > 3) toastMessage += `\n...and ${errorMessages.length - 3} more`;
+        }
+      
+        Toast.show({
+          type: "success",
+          text1: "Save Complete",
+          text2: toastMessage,
+        });
       }
-  
-      Toast.show({
-        type: toastType,
-        text1: toastTitle,
-        text2: messageParts.join("\n"),
-      });
-  
-      // Log detailed errors for debugging
-      if (errorMessages.length > 0) {
-        console.log("Recipe save errors:", errorMessages);
+      
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        Toast.show({
+          type: "error",
+          text1: "Save Failed",
+          text2: `Failed to save recipes: ${errorMessage}`,
+        });
       }
-  
-    } catch (error: any) {
-      console.error("Failed to save recipes:", error);
-      Toast.show({
-        type: "error",
-        text1: "Save Failed",
-        text2: error.message || "An unexpected error occurred",
-      });
-    }
   };
 
   const pickImage = async (source: "gallery" | "camera") => {
@@ -1035,7 +1013,7 @@ const clearChat = () => {
         {/* Header */}
         <View style={styles.logoContainer}>
           <Image
-            source={require("../assets/images/logo/smartbites-high-resolution-logo-transparent.png")}
+            source={require("../assets/images/logo/adaptive-icon.png")}
             style={styles.logo}
           />
           <TouchableOpacity style={styles.clearButton} onPress={clearChat}>

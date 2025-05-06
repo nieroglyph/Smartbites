@@ -64,7 +64,7 @@ const SignupScreen = () => {
   const handleSignUp = async () => {
     if (validateFields()) {
       try {
-        const response = await fetch("http://192.168.254.193:8000/api/register/", {  // Replace with your backend IP
+        const response = await fetch("https://7e24-180-190-253-87.ngrok-free.app/api/register/", {  // Replace with your backend IP
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

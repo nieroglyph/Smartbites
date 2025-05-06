@@ -95,7 +95,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'smartbites',
         'USER': 'root',
-        'PASSWORD': 'mark1234!',
+        'PASSWORD': 'Tristan012903',
         'HOST': 'localhost',
         'PORT': '3306',
     }
@@ -160,9 +160,21 @@ EMAIL_HOST_USER      = os.environ['EMAIL_HOST_USER']
 EMAIL_HOST_PASSWORD  = os.environ['EMAIL_HOST_PASSWORD']
 DEFAULT_FROM_EMAIL   = EMAIL_HOST_USER
 
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:3000",  # Allow React frontend
-# ]
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8000",  # Allow React frontend
+    "https://*.ngrok-free.app",
+    "http://127.0.0.1:8000",
+    "http://localhost:8081",
+    "https://7e24-180-190-253-87.ngrok-free.app"
+]
+CSRF_TRUSTED_ORIGINS = [
+    "https://7e24-180-190-253-87.ngrok-free.app",
+    "https://*.ngrok-free.app",
+]
+CORS_ALLOW_HEADERS = ["*"]
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
 
-ALLOWED_HOSTS = ['127.0.0.1','192.168.1.9', '192.168.170.150','http://localhost:3306', '192.168.254.111', '192.168.100.10', '192.168.1.7', '192.168.254.193'] 
+ALLOWED_HOSTS = ['127.0.0.1','192.168.1.9', 'localhost', '192.168.170.150','http://localhost:3306', '192.168.254.111', '192.168.100.10', '192.168.1.7', '57fa-180-190-253-87.ngrok-free.app'] 
 

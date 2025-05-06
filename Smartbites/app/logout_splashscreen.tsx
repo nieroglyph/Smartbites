@@ -38,7 +38,7 @@ const LogoutSplashScreen: React.FC = () => {
     <View style={styles.container}>
       <View style={styles.content}>
         <Image 
-          source={require('../assets/images/logo/smartbites-high-resolution-logo.png')}
+          source={require("../assets/images/logo/icon.png")}
           style={styles.logo}
           resizeMode="contain"
         />

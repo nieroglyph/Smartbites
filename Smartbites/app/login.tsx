@@ -35,7 +35,7 @@ const LoginScreen: React.FC = () => {
     }
 
     setLoading(true);
-    try {const response = await fetch("http://192.168.254.193:8000/api/login/", {
+    try {const response = await fetch("https://7e24-180-190-253-87.ngrok-free.app/api/login/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

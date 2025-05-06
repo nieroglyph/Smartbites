@@ -226,7 +226,7 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
         } as any);
       }
 
-      const response = await fetch("http://192.168.254.193:8000/api/update-profile/",
+      const response = await fetch("https://7e24-180-190-253-87.ngrok-free.app/api/update-profile/",
         {
           method: "PATCH",
           headers: {
@@ -304,7 +304,7 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
         return;
       }
   
-      const response = await fetch("http://192.168.254.193:8000/api/change-password/",
+      const response = await fetch("https://7e24-180-190-253-87.ngrok-free.app/api/change-password/",
 
         {
           method: "POST",
@@ -326,7 +326,7 @@ const ProfileEdit: React.FC<ProfileEditProps> = ({ navigation }) => {
           text1: "Password Changed",
           text2: "Please login with your new password",
         });
-        await fetch("http://192.168.254.193:8000/api/logout/", {
+        await fetch("https://7e24-180-190-253-87.ngrok-free.app/api/logout/", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

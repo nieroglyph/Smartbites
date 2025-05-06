@@ -224,7 +224,7 @@ const ProfileScreen = () => {
     try {
       const token = await AsyncStorage.getItem("authToken");
       if (!token) return;
-      await fetch("http://192.168.254.193:8000/api/logout/", {
+      await fetch("https://7e24-180-190-253-87.ngrok-free.app/api/logout/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

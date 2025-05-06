@@ -3,10 +3,14 @@
     "name": "Smartbites",
     "slug": "Smartbites",
     "scheme": "smartbites",
-    "platforms": ["ios", "android", "web"],
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/logo/icon.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -18,15 +22,19 @@
     },
     "android": {
       "permissions": [
-        "CAMERA"
+        "CAMERA",
+        "android.permission.CAMERA",
+        "CAMERA",
+        "android.permission.CAMERA"
       ],
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/images/logo/adaptive-icon.png",
+        "backgroundColor": "#FE7F2D"
       },
       "compileSdkVersion": 33,
       "targetSdkVersion": 33,
-      "buildToolsVersion": "33.0.0"
+      "buildToolsVersion": "33.0.0",
+      "package": "com.anonymous.Smartbites"
     },
     "web": {
       "bundler": "metro",
@@ -38,10 +46,10 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/logo/adaptive-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#00272B"
         }
       ],
       "react-native-vision-camera",

@@ -33,7 +33,7 @@ const useUserProfile = () => {
           setLoading(false);
           return;
         }
-        const response = await fetch("http://192.168.254.193:8000/api/current-user/", {
+        const response = await fetch("https://7e24-180-190-253-87.ngrok-free.app/api/current-user/", {
           method: "GET",
           headers: {
             "Content-Type": "application/json",

@@ -212,7 +212,7 @@ const HomeScreen = () => {
     }
 
     try {
-      const res = await fetch(`http://192.168.254.193:8000/api/update-recipe/${editingRecipe.id}/`,
+      const res = await fetch(`https://7e24-180-190-253-87.ngrok-free.app/api/update-recipe/${editingRecipe.id}/`,
         {
           method: "PUT",
           headers: {
@@ -264,14 +264,14 @@ const HomeScreen = () => {
         if (!token) throw new Error("Not authenticated");
 
         if (ids.length === 1) {
-          await fetch( `http://192.168.254.193:8000/api/delete-recipe/${ids[0]}/`,
+          await fetch( `https://7e24-180-190-253-87.ngrok-free.app/api/delete-recipe/${ids[0]}/`,
             {
               method: "DELETE",
               headers: { Authorization: `Token ${token}` },
             }
           );
         } else {
-          await fetch( "http://192.168.254.193:8000/api/delete-multiple-recipes/",
+          await fetch( "https://7e24-180-190-253-87.ngrok-free.app/api/delete-multiple-recipes/",
             {
               method: "POST",
               headers: {
@@ -395,7 +395,7 @@ const HomeScreen = () => {
     <TouchableWithoutFeedback onPress={() => setMenuVisibleId(null)}>
       <View style={styles.container}>
         <Image
-          source={require("../assets/images/logo/smartbites-high-resolution-logo-transparent.png")}
+          source={require("../assets/images/logo/adaptive-icon.png")}
           style={styles.logo}
         />
 

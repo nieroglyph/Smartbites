@@ -30,7 +30,7 @@ const ForgotPasswordScreen: React.FC = () => {
     }
     setLoading(true);
     try {
-      const res = await fetch("http://192.168.254.193:8000/auth/users/reset_password/",
+      const res = await fetch("https://7e24-180-190-253-87.ngrok-free.app/auth/users/reset_password/",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -73,7 +73,7 @@ const ForgotPasswordScreen: React.FC = () => {
 
       {/* Logo */}
       <Image
-        source={require("../../assets/images/logo/smartbites-high-resolution-logo-transparent.png")}
+        source={require("../../assets/images/logo/adaptive-icon.png")}
         style={styles.logo}
       />
 

@@ -259,7 +259,7 @@ const BudgetScreen = () => {
         <TouchableWithoutFeedback onPress={dismissKeyboard}>
           <View style={styles.container}>
             <Image
-              source={require("../assets/images/logo/smartbites-high-resolution-logo-transparent.png")}
+              source={require("../assets/images/logo/adaptive-icon.png")}
               style={styles.logo}
             />
 

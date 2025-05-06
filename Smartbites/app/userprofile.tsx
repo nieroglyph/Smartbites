@@ -173,7 +173,7 @@ const UserprofileScreen = () => {
         return false;
       }
 
-      const response = await fetch("http://192.168.254.193:8000/api/update-user-profile/",
+      const response = await fetch("https://7e24-180-190-253-87.ngrok-free.app/api/update-user-profile/",
         {
           method: "PATCH",
           headers: {

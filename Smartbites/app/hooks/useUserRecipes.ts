@@ -23,7 +23,7 @@ export default function useUserRecipes() {
       if (!token) throw new Error("No auth token");
       
       const res = await fetch(
-        "http://192.168.254.193:8000/api/get-user-recipes/",
+        "https://7e24-180-190-253-87.ngrok-free.app/api/get-user-recipes/",
         { headers: { Authorization: `Token ${token}` } }
       );
       
